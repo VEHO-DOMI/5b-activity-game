@@ -352,7 +352,7 @@ h1 span {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* Responsive */
+/* Responsive — Mobile */
 @media (max-width: 600px) {
   h1 { font-size: 1.7rem; }
   .source-grid { gap: 0.35rem; }
@@ -368,6 +368,102 @@ h1 span {
   .type-grid { flex-direction: column; }
   .type-btn { min-width: unset; }
   .screen { padding: 0 0.8rem; }
+}
+
+/* Responsive — Desktop */
+@media (min-width: 768px) {
+  .screen { max-width: 680px; padding: 0 2rem; }
+  h1 { font-size: 2.6rem; margin: 2rem 0 0.2rem; }
+  .subtitle { font-size: 0.82rem; margin-bottom: 2rem; letter-spacing: 0.25em; }
+
+  .welcome-bar { margin-bottom: 1.2rem; }
+  .welcome-name { font-size: 1.4rem; }
+  .welcome-name small { font-size: 0.82rem; }
+  .logout-btn { font-size: 0.78rem; padding: 0.45rem 1rem; }
+
+  .stats-bar { gap: 0.7rem; margin-bottom: 1.2rem; }
+  .stat-card { padding: 1rem 0.8rem; border-radius: 16px; }
+  .stat-value { font-size: 1.8rem; }
+  .stat-label { font-size: 0.68rem; margin-top: 0.25rem; }
+
+  .card { padding: 1.5rem 1.4rem; margin-bottom: 1.1rem; border-radius: 22px; }
+  .card h3 { font-size: 0.75rem; letter-spacing: 0.14em; margin-bottom: 1rem; }
+
+  .source-grid { grid-template-columns: 1fr 1fr 1fr; gap: 0.6rem; }
+  .source-btn { padding: 0.9rem 0.8rem; font-size: 0.88rem; border-radius: 16px; }
+  .source-btn .count { font-size: 0.72rem; margin-top: 0.25rem; }
+  .quick-btns { gap: 0.5rem; margin-top: 0.8rem; }
+  .quick-btn { padding: 0.55rem 0.8rem; font-size: 0.76rem; border-radius: 10px; }
+
+  .type-grid { gap: 0.5rem; }
+  .type-btn { padding: 0.75rem 0.7rem; font-size: 0.85rem; border-radius: 12px; }
+
+  .word-count-display { font-size: 0.92rem; padding: 0.6rem; margin: 0.8rem 0; }
+
+  .btn { padding: 0.85rem 1.6rem; font-size: 0.95rem; border-radius: 16px; }
+  .btn-small { padding: 0.6rem 1.2rem; font-size: 0.85rem; }
+
+  .home-actions { gap: 0.6rem; margin-top: 0.4rem; }
+
+  /* Quiz */
+  .progress-wrap { margin-bottom: 1.5rem; }
+  .progress-bar-bg { height: 6px; }
+  .progress-text { font-size: 0.78rem; margin-top: 0.6rem; }
+  .quiz-card { padding: 2rem 2rem; border-radius: 24px; margin-bottom: 1.2rem; }
+  .task-type-label { font-size: 0.72rem; padding: 0.35rem 0.9rem; margin-bottom: 1.4rem; }
+  .quiz-prompt { font-size: 1.25rem; line-height: 1.75; margin-bottom: 1.6rem; }
+  .quiz-prompt .gap { padding: 0.08em 0.25em; font-size: 1.1rem; }
+  .quiz-prompt .german-word { font-size: 1.5rem; padding: 1rem 0; }
+  .answer-input { padding: 1rem 1.2rem; font-size: 1.1rem; border-radius: 16px; }
+  .feedback { padding: 1rem 1.2rem; font-size: 0.92rem; border-radius: 16px; }
+  .source-tag { font-size: 0.68rem; padding: 0.3rem 0.75rem; margin-top: 1.2rem; }
+
+  /* Results */
+  .results-score { margin: 2rem 0; }
+  .results-score .big-score { font-size: 4.5rem; }
+  .results-score .score-label { font-size: 1rem; margin-top: 0.6rem; }
+  .result-item { padding: 0.85rem 0.6rem; font-size: 0.92rem; }
+  .result-answer { font-size: 0.82rem; }
+
+  /* Login */
+  .login-card { max-width: 420px; padding: 2.8rem 2.2rem; border-radius: 24px; }
+  .login-card h2 { font-size: 1.6rem; }
+  .login-card p { font-size: 0.9rem; }
+  .login-input { font-size: 1.1rem; padding: 1rem 1.2rem; border-radius: 16px; }
+  .pin-input { width: 180px; font-size: 1.7rem; padding: 1rem 1.2rem; }
+  .student-chip { padding: 0.5rem 1rem; font-size: 0.85rem; }
+
+  /* Progress screen */
+  .progress-overall { gap: 0.7rem; margin-bottom: 1.3rem; }
+  .progress-overall .stat-card { padding: 1rem 0.8rem; border-radius: 16px; }
+  .progress-ring-wrap { margin-bottom: 1.5rem; }
+  .progress-ring-wrap svg { width: 170px; height: 170px; }
+  .source-progress-item { padding: 1rem 1.2rem; border-radius: 16px; margin-bottom: 0.55rem; }
+  .source-progress-name { font-size: 1rem; }
+  .source-progress-stats { font-size: 0.78rem; gap: 0.8rem; }
+  .word-detail-row { padding: 0.5rem 0.3rem; font-size: 0.86rem; }
+  .progress-legend { font-size: 0.75rem; gap: 1.2rem; margin-bottom: 1.3rem; }
+
+  /* Reference screen */
+  .ref-source-title { font-size: 0.78rem; margin-bottom: 0.6rem; }
+  .ref-word-item { padding: 0.9rem 1.2rem; border-radius: 14px; margin-bottom: 0.45rem; }
+  .ref-word-en { font-size: 0.95rem; }
+  .ref-word-de { font-size: 0.85rem; }
+  .ref-word-details { font-size: 0.88rem; }
+  .ref-detail-label { font-size: 0.68rem; }
+  .ref-select { font-size: 0.88rem; padding: 0.6rem 1rem; }
+}
+
+/* Large desktop */
+@media (min-width: 1024px) {
+  .screen { max-width: 760px; }
+  h1 { font-size: 3rem; }
+  .source-grid { grid-template-columns: repeat(4, 1fr); }
+  .quiz-card { padding: 2.4rem 2.5rem; }
+  .quiz-prompt { font-size: 1.35rem; }
+  .quiz-prompt .german-word { font-size: 1.7rem; }
+  .answer-input { font-size: 1.15rem; }
+  .login-card { max-width: 460px; padding: 3rem 2.5rem; }
 }
 
 body.playing h1, body.playing .subtitle { display: none; }
