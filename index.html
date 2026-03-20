@@ -29,6 +29,7 @@
     --accent-glow: rgba(244,63,94,0.3);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html { overscroll-behavior: none; }
   button, input { touch-action: manipulation; }
   body {
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
@@ -339,18 +340,20 @@
     .subtitle { margin-bottom: 1rem; }
     .screen { padding: 0 1rem; }
 
-    /* Play screen: tighter spacing */
-    .timer-bar { margin-bottom: 0.4rem; }
-    .timer-text { font-size: 2.8rem; margin-bottom: 0.15rem; }
-    .category-label { margin-bottom: 0.4rem; padding: 0.2rem 0.8rem; font-size: 0.7rem; }
-    .round-score { margin-bottom: 0.6rem; font-size: 0.85rem; }
+    /* Play screen: compact top, big buttons */
+    .timer-bar { margin-bottom: 0.3rem; }
+    .timer-text { font-size: 2.6rem; margin-bottom: 0.1rem; }
+    .category-label { margin-bottom: 0.3rem; padding: 0.2rem 0.8rem; font-size: 0.7rem; }
+    .round-score { margin-bottom: 0.5rem; font-size: 0.85rem; }
     .round-score strong { font-size: 1.2rem; }
-    .word-card { padding: 1.5rem 1.2rem; min-height: 100px; margin-bottom: 0.8rem; border-radius: 16px; }
-    .word-text { font-size: 1.4rem; }
-    .game-actions { gap: 0.4rem; }
-    .game-actions .btn { padding: 0.65rem 0.5rem; font-size: 0.85rem; }
-    .bottom-actions { margin-top: 0.8rem; }
-    .bottom-actions .btn { padding: 0.4rem 0.7rem; font-size: 0.75rem; }
+    .word-card { padding: 1.2rem 1rem; min-height: 85px; margin-bottom: 0.7rem; border-radius: 16px; }
+    .word-text { font-size: 1.35rem; }
+    /* BIG touch-friendly action buttons */
+    .game-actions { gap: 0.5rem; }
+    .game-actions .btn { padding: 1rem 0.5rem; font-size: 1rem; border-radius: 14px; min-height: 52px; }
+    /* Reset buttons: small, pushed far down, visually separated */
+    .bottom-actions { margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.06); }
+    .bottom-actions .btn { padding: 0.4rem 0.7rem; font-size: 0.7rem; opacity: 0.6; }
 
     /* Category buttons */
     .category-picker { gap: 0.5rem; margin: 0.8rem 0 1rem; }
@@ -1297,6 +1300,23 @@ function renderHistory() {
 
 // Render history on page load
 document.addEventListener('DOMContentLoaded', renderHistory);
+
+// ============================================================
+// PREVENT PULL-TO-REFRESH (iOS Safari + Android Chrome)
+// ============================================================
+(function() {
+  let startY = 0;
+  document.addEventListener('touchstart', function(e) {
+    startY = e.touches[0].pageY;
+  }, { passive: true });
+  document.addEventListener('touchmove', function(e) {
+    const y = e.touches[0].pageY;
+    // If at top of page and pulling down, prevent it
+    if (window.scrollY === 0 && y > startY) {
+      e.preventDefault();
+    }
+  }, { passive: false });
+})();
 
 // ============================================================
 // UTILS
