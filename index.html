@@ -285,13 +285,19 @@
     border-top: 1px solid rgba(255,255,255,0.06); padding-top: 0.8rem;
   }
   .summary-words li {
-    padding: 0.4rem 0; border-bottom: 1px solid rgba(255,255,255,0.04);
-    list-style: none; display: flex; justify-content: space-between;
-    font-size: 0.9rem; font-weight: 500;
+    padding: 0.5rem 0.4rem; border-bottom: 1px solid rgba(255,255,255,0.04);
+    list-style: none; display: flex; justify-content: space-between; align-items: center;
+    font-size: 0.9rem; font-weight: 500; cursor: pointer; border-radius: 8px;
+    transition: background 0.15s;
   }
+  .summary-words li:hover { background: rgba(255,255,255,0.03); }
   .summary-words li:last-child { border-bottom: none; }
   .summary-words .correct { color: var(--show); font-weight: 600; }
   .summary-words .skipped { color: var(--muted); }
+  .summary-words .toggle-hint {
+    font-size: 0.6rem; color: var(--muted); opacity: 0.5; margin-left: 0.4rem; font-weight: 400;
+  }
+  .summary-words li.toggled { opacity: 0.55; }
 
   .action-bar { display: flex; gap: 0.6rem; width: 100%; margin-top: 0.3rem; }
   .action-bar .btn { flex: 1; }
@@ -348,9 +354,11 @@
     .round-score strong { font-size: 1.2rem; }
     .word-card { padding: 1.2rem 1rem; min-height: 85px; margin-bottom: 0.7rem; border-radius: 16px; }
     .word-text { font-size: 1.35rem; }
-    /* BIG touch-friendly action buttons */
-    .game-actions { gap: 0.5rem; }
-    .game-actions .btn { padding: 1rem 0.5rem; font-size: 1rem; border-radius: 14px; min-height: 52px; }
+    /* BIG touch-friendly action buttons — stack vertically on mobile */
+    .game-actions { gap: 0.5rem; flex-direction: column; }
+    .game-actions .btn { padding: 1rem 0.5rem; font-size: 1rem; border-radius: 14px; min-height: 52px; width: 100%; }
+    .overlay-actions { flex-direction: column; }
+    .overlay-actions .btn { min-height: 48px; font-size: 0.95rem; }
     /* Reset buttons: small, pushed far down, visually separated */
     .bottom-actions { margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.06); }
     .bottom-actions .btn { padding: 0.4rem 0.7rem; font-size: 0.7rem; opacity: 0.6; }
@@ -540,6 +548,19 @@
   <h2 style="margin-bottom:1.2rem; font-size:1.5rem; font-weight:800; letter-spacing:-0.03em;">Game Over!</h2>
   <div class="final-scores" id="final-scores"></div>
   <button class="btn btn-primary btn-block" style="margin-top:1.5rem;" onclick="newGame()">New Game</button>
+</div>
+
+<!-- Time's Up Overlay -->
+<div class="overlay" id="timesup-overlay">
+  <div class="overlay-card times-up">
+    <h3>⏰ Time's Up!</h3>
+    <p>The last word was: <strong id="timesup-word" style="color:var(--text);display:block;font-size:1.2rem;margin-top:0.3rem;"></strong></p>
+    <p style="margin-top:0.5rem;">Did the team get this word before the buzzer?</p>
+    <div class="overlay-actions">
+      <button class="btn btn-success" onclick="timesUpAnswer(true)">Yes ✓</button>
+      <button class="btn btn-secondary" onclick="timesUpAnswer(false)">No ✗</button>
+    </div>
+  </div>
 </div>
 
 <!-- Confirmation Overlay -->
@@ -1105,6 +1126,27 @@ function endRound() {
   clearInterval(state.timer);
   state.roundActive = false;
   sfxBuzzer();
+  // Show time's-up dialog if there was a word being displayed
+  const lastWord = state.currentWordIdx !== null ? ALL_WORDS[state.currentWordIdx] : null;
+  if (lastWord && state.roundWords.length > 0) {
+    document.getElementById('timesup-word').textContent = lastWord.text;
+    document.getElementById('timesup-overlay').classList.add('active');
+    state._timesUpWordIdx = state.currentWordIdx;
+  } else {
+    state.groups[state.currentGroupIdx].score += state.roundScore;
+    showScreen('summary');
+    updateSummaryScreen();
+  }
+}
+
+function timesUpAnswer(gotIt) {
+  document.getElementById('timesup-overlay').classList.remove('active');
+  if (gotIt && state._timesUpWordIdx !== null) {
+    state.usedWordIds.add(state._timesUpWordIdx);
+    state.roundWords.push({ wordIdx: state._timesUpWordIdx, result: 'correct' });
+    state.roundScore++;
+  }
+  state._timesUpWordIdx = null;
   state.groups[state.currentGroupIdx].score += state.roundScore;
   showScreen('summary');
   updateSummaryScreen();
@@ -1116,13 +1158,37 @@ function updateSummaryScreen() {
   document.getElementById('summary-points').textContent = state.roundScore;
   const list = document.getElementById('summary-words');
   list.innerHTML = '';
-  state.roundWords.forEach(rw => {
+  state.roundWords.forEach((rw, i) => {
     const w = ALL_WORDS[rw.wordIdx];
     const cls = rw.result === 'correct' ? 'correct' : 'skipped';
     const icon = rw.result === 'correct' ? '✓' : '—';
-    list.innerHTML += `<li><span>${esc(w.text)}</span><span class="${cls}">${icon}</span></li>`;
+    const li = document.createElement('li');
+    li.innerHTML = `<span>${esc(w.text)}</span><span class="${cls}">${icon}<span class="toggle-hint"> tap</span></span>`;
+    li.onclick = () => toggleSummaryWord(i);
+    list.appendChild(li);
   });
   renderScoreboard('summary-scoreboard');
+}
+
+function toggleSummaryWord(index) {
+  const rw = state.roundWords[index];
+  const g = state.groups[state.currentGroupIdx];
+  if (rw.result === 'correct') {
+    // Toggle to skipped: remove point
+    rw.result = 'skipped';
+    state.roundScore--;
+    g.score--;
+    state.usedWordIds.delete(rw.wordIdx);
+    state.roundSkippedIds.add(rw.wordIdx);
+  } else {
+    // Toggle to correct: add point
+    rw.result = 'correct';
+    state.roundScore++;
+    g.score++;
+    state.usedWordIds.add(rw.wordIdx);
+    state.roundSkippedIds.delete(rw.wordIdx);
+  }
+  updateSummaryScreen();
 }
 
 function undoRound() {
