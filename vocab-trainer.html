@@ -9,6 +9,8 @@
 <title>5B Vocab Trainer</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <style>
 :root {
   --bg: #0f0f1a;
@@ -61,7 +63,7 @@ h1 span {
 .screen.active { display: flex; flex-direction: column; align-items: center; animation: fadeIn 0.25s ease-out; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
-/* Cards & Sections */
+/* Cards */
 .card {
   width: 100%; background: var(--card); border: 1.5px solid var(--card-border);
   border-radius: 16px; padding: 1.2rem; margin-bottom: 1rem; backdrop-filter: blur(10px);
@@ -70,6 +72,53 @@ h1 span {
   font-size: 0.7rem; color: var(--muted); text-transform: uppercase;
   letter-spacing: 0.1em; font-weight: 600; margin-bottom: 0.8rem;
 }
+
+/* Login */
+.login-card {
+  width: 100%; max-width: 380px; background: var(--card); border: 1.5px solid var(--card-border);
+  border-radius: 20px; padding: 2rem 1.5rem; backdrop-filter: blur(10px); text-align: center;
+}
+.login-card h2 { font-size: 1.3rem; font-weight: 700; margin-bottom: 0.3rem; }
+.login-card p { color: var(--muted); font-size: 0.82rem; margin-bottom: 1.5rem; }
+.login-input {
+  width: 100%; padding: 0.85rem 1rem; border-radius: 12px; border: 1.5px solid var(--card-border);
+  background: rgba(255,255,255,0.06); color: var(--text); font-size: 1rem;
+  font-family: inherit; margin-bottom: 1rem; text-align: center;
+}
+.login-input:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-glow); }
+.login-input::placeholder { color: var(--muted); }
+.login-error { color: var(--wrong); font-size: 0.8rem; margin-bottom: 0.8rem; display: none; }
+.existing-students { margin-top: 1.2rem; }
+.existing-students h4 { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.6rem; }
+.student-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; justify-content: center; }
+.student-chip {
+  padding: 0.4rem 0.8rem; border-radius: 20px; border: 1.5px solid var(--card-border);
+  background: var(--card); color: var(--text-secondary); font-size: 0.78rem; font-weight: 500;
+  cursor: pointer; font-family: inherit; transition: all 0.15s;
+}
+.student-chip:hover { background: rgba(139,92,246,0.12); border-color: rgba(139,92,246,0.4); color: var(--text); }
+
+/* Welcome header */
+.welcome-bar {
+  width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;
+}
+.welcome-name { font-weight: 700; font-size: 1rem; }
+.welcome-name small { color: var(--muted); font-weight: 400; font-size: 0.75rem; display: block; }
+.logout-btn {
+  padding: 0.35rem 0.7rem; border-radius: 8px; border: 1px solid var(--card-border);
+  background: transparent; color: var(--muted); font-size: 0.7rem; cursor: pointer;
+  font-family: inherit; transition: all 0.15s;
+}
+.logout-btn:hover { color: var(--wrong); border-color: rgba(239,68,68,0.3); }
+
+/* Stats bar */
+.stats-bar { display: flex; gap: 0.5rem; width: 100%; margin-bottom: 1rem; }
+.stat-card {
+  flex: 1; background: var(--card); border: 1.5px solid var(--card-border); border-radius: 12px;
+  padding: 0.7rem 0.5rem; text-align: center; backdrop-filter: blur(10px);
+}
+.stat-value { font-size: 1.3rem; font-weight: 800; color: var(--accent); }
+.stat-label { font-size: 0.6rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 0.15rem; }
 
 /* Source Selection */
 .source-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
@@ -85,6 +134,10 @@ h1 span {
   color: var(--text); box-shadow: 0 0 12px rgba(139,92,246,0.1);
 }
 .source-btn .count { display: block; font-size: 0.65rem; color: var(--muted); font-weight: 400; margin-top: 0.15rem; }
+.source-btn .progress-indicator {
+  position: absolute; bottom: 0; left: 0; height: 3px; border-radius: 0 0 12px 12px;
+  background: linear-gradient(90deg, var(--correct), #4ade80); transition: width 0.3s;
+}
 .quick-btns { display: flex; gap: 0.5rem; margin-top: 0.6rem; }
 .quick-btn {
   flex: 1; padding: 0.5rem; border-radius: 10px; border: 1.5px dashed var(--card-border);
@@ -124,43 +177,35 @@ h1 span {
 .btn-danger { background: rgba(239,68,68,0.15); color: #f87171; border: 1.5px solid rgba(239,68,68,0.25); }
 .btn-block { width: 100%; }
 .btn-small { padding: 0.45rem 0.9rem; font-size: 0.8rem; }
-
-.word-count-display {
-  text-align: center; margin: 0.8rem 0; font-size: 0.85rem; color: var(--text-secondary);
+.btn-weak {
+  background: linear-gradient(135deg, #f59e0b, #d97706); color: white;
+  box-shadow: 0 2px 12px rgba(245,158,11,0.25);
 }
+
+.word-count-display { text-align: center; margin: 0.8rem 0; font-size: 0.85rem; color: var(--text-secondary); }
 .word-count-display strong { color: var(--text); font-weight: 700; }
 
 /* Progress bar */
 .progress-wrap { width: 100%; margin-bottom: 1rem; }
-.progress-bar-bg {
-  width: 100%; height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden;
-}
-.progress-bar-fill {
-  height: 100%; background: linear-gradient(90deg, var(--accent), #a78bfa);
-  border-radius: 3px; transition: width 0.3s ease;
-}
+.progress-bar-bg { width: 100%; height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden; }
+.progress-bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent), #a78bfa); border-radius: 3px; transition: width 0.3s ease; }
 .progress-text { display: flex; justify-content: space-between; margin-top: 0.4rem; font-size: 0.72rem; color: var(--muted); }
 
 /* Quiz Card */
 .quiz-card {
   width: 100%; background: var(--card); border: 1.5px solid var(--card-border);
-  border-radius: 20px; padding: 1.5rem 1.3rem; backdrop-filter: blur(10px);
-  margin-bottom: 1rem;
+  border-radius: 20px; padding: 1.5rem 1.3rem; backdrop-filter: blur(10px); margin-bottom: 1rem;
 }
 .task-type-label {
   display: inline-block; padding: 0.3rem 0.7rem; border-radius: 8px;
-  font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
-  margin-bottom: 1rem;
+  font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 1rem;
 }
 .task-type-label.context { background: rgba(59,130,246,0.15); color: #60a5fa; }
 .task-type-label.definition { background: rgba(245,158,11,0.15); color: #fbbf24; }
 .task-type-label.translation { background: rgba(236,72,153,0.15); color: #f472b6; }
 
 .quiz-prompt { font-size: 1.1rem; line-height: 1.6; margin-bottom: 1.2rem; color: var(--text); }
-.quiz-prompt .gap {
-  display: inline; font-weight: 700; color: var(--accent); letter-spacing: 0.05em;
-  border-bottom: 2px dashed rgba(139,92,246,0.4); padding: 0 0.15em;
-}
+.quiz-prompt .gap { display: inline; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; border-bottom: 2px dashed rgba(139,92,246,0.4); padding: 0 0.15em; }
 .quiz-prompt .german-word { font-weight: 700; color: var(--trans-color); font-size: 1.2rem; }
 
 .answer-row { display: flex; gap: 0.5rem; margin-bottom: 0.8rem; }
@@ -174,10 +219,7 @@ h1 span {
 .answer-input.correct { border-color: var(--correct); box-shadow: 0 0 0 3px var(--correct-glow); }
 .answer-input.wrong { border-color: var(--wrong); box-shadow: 0 0 0 3px var(--wrong-glow); }
 
-.feedback {
-  padding: 0.8rem 1rem; border-radius: 12px; margin-bottom: 0.8rem;
-  font-size: 0.88rem; font-weight: 500; display: none;
-}
+.feedback { padding: 0.8rem 1rem; border-radius: 12px; margin-bottom: 0.8rem; font-size: 0.88rem; font-weight: 500; display: none; }
 .feedback.correct { display: block; background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.25); color: #4ade80; }
 .feedback.wrong { display: block; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.25); color: #f87171; }
 .feedback .correct-answer { font-weight: 700; color: var(--text); }
@@ -192,17 +234,16 @@ h1 span {
 }
 
 /* Results */
-.results-score {
-  text-align: center; margin: 1rem 0 1.5rem;
-}
+.results-score { text-align: center; margin: 1rem 0 1.5rem; }
 .results-score .big-score {
   font-size: 3rem; font-weight: 900; letter-spacing: -0.04em;
   background: linear-gradient(135deg, var(--accent), #a78bfa);
   -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
 }
 .results-score .score-label { color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.3rem; }
+.results-score .save-status { font-size: 0.72rem; color: var(--muted); margin-top: 0.5rem; }
 
-.results-list { width: 100%; margin-bottom: 1.2rem; }
+.results-list { width: 100%; margin-bottom: 1.2rem; max-height: 50vh; overflow-y: auto; }
 .result-item {
   display: flex; align-items: center; gap: 0.8rem; padding: 0.7rem 0;
   border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 0.85rem;
@@ -217,6 +258,11 @@ h1 span {
 .results-actions { display: flex; gap: 0.5rem; width: 100%; flex-wrap: wrap; }
 .results-actions .btn { flex: 1; min-width: 140px; }
 
+/* Loading */
+.loading { text-align: center; padding: 2rem; color: var(--muted); }
+.spinner { display: inline-block; width: 24px; height: 24px; border: 3px solid var(--card-border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
 /* Responsive */
 @media (max-width: 600px) {
   h1 { font-size: 1.6rem; }
@@ -224,13 +270,15 @@ h1 span {
   .source-btn { padding: 0.6rem 0.4rem; font-size: 0.78rem; }
   .quiz-card { padding: 1.2rem 1rem; }
   .quiz-prompt { font-size: 1rem; }
+  .stats-bar { gap: 0.35rem; }
+  .stat-card { padding: 0.5rem 0.3rem; }
+  .stat-value { font-size: 1.1rem; }
 }
 @media (max-width: 400px) {
   .type-grid { flex-direction: column; }
   .type-btn { min-width: unset; }
 }
 
-/* Playing state */
 body.playing h1, body.playing .subtitle { display: none; }
 </style>
 </head>
@@ -239,8 +287,34 @@ body.playing h1, body.playing .subtitle { display: none; }
 <h1><span>5B Vocab Trainer</span></h1>
 <p class="subtitle">Practice &bull; Learn &bull; Master</p>
 
+<!-- LOGIN SCREEN -->
+<div id="login-screen" class="screen active">
+  <div class="login-card">
+    <h2>Welcome!</h2>
+    <p>Enter your name to start practicing</p>
+    <input type="text" class="login-input" id="login-name" placeholder="Your name..." autocomplete="off" autocapitalize="words">
+    <div class="login-error" id="login-error"></div>
+    <button class="btn btn-primary btn-block" id="login-btn" onclick="loginStudent()">Start Learning</button>
+    <div class="existing-students" id="existing-students" style="display:none;">
+      <h4>Or choose your name</h4>
+      <div class="student-chips" id="student-chips"></div>
+    </div>
+  </div>
+</div>
+
 <!-- HOME SCREEN -->
-<div id="home-screen" class="screen active">
+<div id="home-screen" class="screen">
+  <div class="welcome-bar">
+    <div class="welcome-name" id="welcome-name">Welcome <small>5B</small></div>
+    <button class="logout-btn" onclick="logout()">Switch User</button>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stat-card"><div class="stat-value" id="stat-sessions">0</div><div class="stat-label">Sessions</div></div>
+    <div class="stat-card"><div class="stat-value" id="stat-accuracy">–</div><div class="stat-label">Accuracy</div></div>
+    <div class="stat-card"><div class="stat-value" id="stat-mastered">0</div><div class="stat-label">Mastered</div></div>
+  </div>
+
   <div class="card">
     <h3>Select Sources</h3>
     <div class="source-grid" id="source-grid"></div>
@@ -264,7 +338,8 @@ body.playing h1, body.playing .subtitle { display: none; }
 
   <div class="word-count-display" id="word-count">Select sources to begin</div>
 
-  <button class="btn btn-primary btn-block" id="start-btn" disabled onclick="startPractice()">Start Practice</button>
+  <button class="btn btn-primary btn-block" id="start-btn" disabled onclick="startPractice()" style="margin-bottom:0.5rem;">Start Practice</button>
+  <button class="btn btn-weak btn-block btn-small" id="weak-btn" style="display:none;" onclick="practiceWeakWords()">Practice Weak Words</button>
 </div>
 
 <!-- PRACTICE SCREEN -->
@@ -273,7 +348,6 @@ body.playing h1, body.playing .subtitle { display: none; }
     <div class="progress-bar-bg"><div class="progress-bar-fill" id="progress-fill"></div></div>
     <div class="progress-text"><span id="progress-count">0/0</span><span id="progress-score">Score: 0</span></div>
   </div>
-
   <div class="quiz-card" id="quiz-card">
     <div class="task-type-label" id="task-label">Context</div>
     <div class="quiz-prompt" id="quiz-prompt"></div>
@@ -287,7 +361,6 @@ body.playing h1, body.playing .subtitle { display: none; }
     </div>
     <div class="source-tag" id="source-tag"></div>
   </div>
-
   <button class="btn btn-danger btn-small" onclick="endPractice()" style="align-self:center;opacity:0.6;">End Practice</button>
 </div>
 
@@ -296,13 +369,12 @@ body.playing h1, body.playing .subtitle { display: none; }
   <div class="results-score">
     <div class="big-score" id="final-score">0%</div>
     <div class="score-label" id="final-label">0 of 0 correct</div>
+    <div class="save-status" id="save-status"></div>
   </div>
-
   <div class="card">
     <h3>Results</h3>
     <div class="results-list" id="results-list"></div>
   </div>
-
   <div class="results-actions">
     <button class="btn btn-primary" onclick="retryWrong()">Practice Wrong Words</button>
     <button class="btn btn-secondary" onclick="goHome()">New Practice</button>
@@ -310,6 +382,20 @@ body.playing h1, body.playing .subtitle { display: none; }
 </div>
 
 <script>
+// ===== FIREBASE =====
+firebase.initializeApp({
+  apiKey: "AIzaSyDBZaWpfNXamve3OiiqFG1HdoA-KMa3un8",
+  authDomain: "veho-vocab.firebaseapp.com",
+  projectId: "veho-vocab",
+  storageBucket: "veho-vocab.firebasestorage.app",
+  messagingSenderId: "623091115688",
+  appId: "1:623091115688:web:8c8fcbc87a623056d8449d"
+});
+const db = firebase.firestore();
+const CLASS_ID = '5B';
+const classRef = db.collection('classes').doc(CLASS_ID);
+const studentsRef = classRef.collection('students');
+
 // ===== VOCABULARY DATA =====
 const vocabData = {
 "List 1": [
@@ -615,6 +701,10 @@ const vocabData = {
 
 // ===== APP STATE =====
 let state = {
+  studentId: null,
+  studentName: null,
+  studentData: null,
+  progressData: {},
   selectedSources: new Set(),
   exerciseType: 'mix',
   words: [],
@@ -622,21 +712,249 @@ let state = {
   score: 0,
   answered: false,
   results: [],
+  currentType: null,
 };
 
-// ===== INIT =====
-function init() {
+// ===== FIREBASE HELPERS =====
+function slugify(name) {
+  return name.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+}
+
+async function loadExistingStudents() {
+  try {
+    const snap = await studentsRef.get();
+    const chips = document.getElementById('student-chips');
+    const container = document.getElementById('existing-students');
+    chips.innerHTML = '';
+    if (snap.empty) { container.style.display = 'none'; return; }
+    container.style.display = '';
+    snap.forEach(doc => {
+      const data = doc.data();
+      const chip = document.createElement('button');
+      chip.className = 'student-chip';
+      chip.textContent = data.name;
+      chip.onclick = () => { document.getElementById('login-name').value = data.name; loginStudent(); };
+      chips.appendChild(chip);
+    });
+  } catch (e) { console.error('Error loading students:', e); }
+}
+
+async function loginStudent() {
+  const nameInput = document.getElementById('login-name');
+  const name = nameInput.value.trim();
+  if (!name) { showLoginError('Please enter your name'); return; }
+  if (name.length < 2) { showLoginError('Name must be at least 2 characters'); return; }
+
+  const id = slugify(name);
+  const errorEl = document.getElementById('login-error');
+  errorEl.style.display = 'none';
+  document.getElementById('login-btn').disabled = true;
+  document.getElementById('login-btn').textContent = 'Loading...';
+
+  try {
+    const doc = await studentsRef.doc(id).get();
+    if (doc.exists) {
+      state.studentData = doc.data();
+      await studentsRef.doc(id).update({ lastActive: firebase.firestore.FieldValue.serverTimestamp() });
+    } else {
+      const newStudent = {
+        name: name,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        lastActive: firebase.firestore.FieldValue.serverTimestamp(),
+        totalSessions: 0,
+        totalCorrect: 0,
+        totalAnswered: 0,
+      };
+      await studentsRef.doc(id).set(newStudent);
+      state.studentData = { ...newStudent, totalSessions: 0, totalCorrect: 0, totalAnswered: 0 };
+    }
+    state.studentId = id;
+    state.studentName = name;
+    localStorage.setItem('5b-vocab-student', JSON.stringify({ id, name }));
+    await loadProgress();
+    showHomeScreen();
+  } catch (e) {
+    console.error('Login error:', e);
+    showLoginError('Connection error. Check your internet and try again.');
+  }
+  document.getElementById('login-btn').disabled = false;
+  document.getElementById('login-btn').textContent = 'Start Learning';
+}
+
+function showLoginError(msg) {
+  const el = document.getElementById('login-error');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+async function loadProgress() {
+  state.progressData = {};
+  try {
+    const snap = await studentsRef.doc(state.studentId).collection('progress').get();
+    snap.forEach(doc => { state.progressData[doc.id] = doc.data(); });
+  } catch (e) { console.error('Error loading progress:', e); }
+}
+
+async function saveSessionResults() {
+  if (!state.studentId || state.results.length === 0) return;
+  const statusEl = document.getElementById('save-status');
+  statusEl.textContent = 'Saving...';
+
+  try {
+    const sources = [...new Set(state.results.map(r => r.word.source))];
+    const pct = state.words.length > 0 ? Math.round((state.score / state.words.length) * 100) : 0;
+
+    // Save session
+    await studentsRef.doc(state.studentId).collection('sessions').add({
+      date: firebase.firestore.FieldValue.serverTimestamp(),
+      sources: sources,
+      type: state.exerciseType,
+      score: state.score,
+      total: state.words.length,
+      pct: pct,
+    });
+
+    // Update student stats
+    await studentsRef.doc(state.studentId).update({
+      totalSessions: firebase.firestore.FieldValue.increment(1),
+      totalCorrect: firebase.firestore.FieldValue.increment(state.score),
+      totalAnswered: firebase.firestore.FieldValue.increment(state.words.length),
+      lastActive: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+
+    // Update per-source word progress
+    const progressBySource = {};
+    for (const r of state.results) {
+      const src = r.word.source;
+      if (!progressBySource[src]) progressBySource[src] = {};
+      const key = r.word.w;
+      if (!progressBySource[src][key]) progressBySource[src][key] = { c: 0, w: 0 };
+      if (r.correct) progressBySource[src][key].c++;
+      else progressBySource[src][key].w++;
+    }
+
+    for (const [src, words] of Object.entries(progressBySource)) {
+      const slug = slugify(src);
+      const docRef = studentsRef.doc(state.studentId).collection('progress').doc(slug);
+      const existing = state.progressData[slug];
+
+      if (existing && existing.words) {
+        const merged = { ...existing.words };
+        for (const [w, counts] of Object.entries(words)) {
+          if (merged[w]) {
+            merged[w] = { c: (merged[w].c || 0) + counts.c, w: (merged[w].w || 0) + counts.w };
+          } else {
+            merged[w] = counts;
+          }
+        }
+        await docRef.set({ source: src, words: merged });
+        state.progressData[slug] = { source: src, words: merged };
+      } else {
+        await docRef.set({ source: src, words: words });
+        state.progressData[slug] = { source: src, words: words };
+      }
+    }
+
+    // Refresh student data
+    const freshDoc = await studentsRef.doc(state.studentId).get();
+    if (freshDoc.exists) state.studentData = freshDoc.data();
+
+    statusEl.textContent = 'Progress saved!';
+  } catch (e) {
+    console.error('Save error:', e);
+    statusEl.textContent = 'Could not save (offline?)';
+  }
+}
+
+function logout() {
+  localStorage.removeItem('5b-vocab-student');
+  state.studentId = null;
+  state.studentName = null;
+  state.studentData = null;
+  state.progressData = {};
+  document.getElementById('login-name').value = '';
+  showScreen('login-screen');
+  loadExistingStudents();
+}
+
+// ===== PROGRESS HELPERS =====
+function getSourceProgress(sourceKey) {
+  const slug = slugify(sourceKey);
+  const prog = state.progressData[slug];
+  if (!prog || !prog.words) return { practiced: 0, mastered: 0, total: vocabData[sourceKey].length };
+  const total = vocabData[sourceKey].length;
+  let practiced = 0, mastered = 0;
+  for (const w of Object.values(prog.words)) {
+    practiced++;
+    if (w.c >= 3 && w.c > w.w) mastered++;
+  }
+  return { practiced, mastered, total };
+}
+
+function getTotalMastered() {
+  let total = 0;
+  for (const key of Object.keys(vocabData)) {
+    total += getSourceProgress(key).mastered;
+  }
+  return total;
+}
+
+function getWeakWords() {
+  const weak = [];
+  for (const [src, entries] of Object.entries(vocabData)) {
+    const slug = slugify(src);
+    const prog = state.progressData[slug];
+    if (!prog || !prog.words) continue;
+    for (const entry of entries) {
+      const w = prog.words[entry.w];
+      if (w && w.w > 0 && w.w >= w.c) {
+        weak.push({ ...entry, source: src });
+      }
+    }
+  }
+  return weak;
+}
+
+// ===== UI INIT =====
+function initSourceGrid() {
   const grid = document.getElementById('source-grid');
   grid.innerHTML = '';
   for (const key of Object.keys(vocabData)) {
     const btn = document.createElement('button');
     btn.className = 'source-btn';
     btn.dataset.source = key;
-    btn.innerHTML = `${key}<span class="count">${vocabData[key].length} words</span>`;
+    const prog = getSourceProgress(key);
+    const pct = prog.total > 0 ? Math.round((prog.mastered / prog.total) * 100) : 0;
+    btn.innerHTML = `${key}<span class="count">${vocabData[key].length} words</span><div class="progress-indicator" style="width:${pct}%"></div>`;
     btn.onclick = () => toggleSource(btn);
     grid.appendChild(btn);
   }
   updateWordCount();
+}
+
+function showHomeScreen() {
+  // Welcome
+  document.getElementById('welcome-name').innerHTML = `${state.studentName} <small>5B</small>`;
+
+  // Stats
+  const d = state.studentData || {};
+  document.getElementById('stat-sessions').textContent = d.totalSessions || 0;
+  const acc = d.totalAnswered > 0 ? Math.round((d.totalCorrect / d.totalAnswered) * 100) + '%' : '–';
+  document.getElementById('stat-accuracy').textContent = acc;
+  document.getElementById('stat-mastered').textContent = getTotalMastered();
+
+  // Weak words button
+  const weakWords = getWeakWords();
+  const weakBtn = document.getElementById('weak-btn');
+  if (weakWords.length > 0) {
+    weakBtn.style.display = '';
+    weakBtn.textContent = `Practice ${weakWords.length} Weak Words`;
+  } else {
+    weakBtn.style.display = 'none';
+  }
+
+  initSourceGrid();
+  showScreen('home-screen');
 }
 
 function toggleSource(btn) {
@@ -700,9 +1018,7 @@ function shuffle(arr) {
 function startPractice() {
   state.words = [];
   state.selectedSources.forEach(src => {
-    vocabData[src].forEach(word => {
-      state.words.push({ ...word, source: src });
-    });
+    vocabData[src].forEach(word => { state.words.push({ ...word, source: src }); });
   });
   shuffle(state.words);
   state.currentIdx = 0;
@@ -725,6 +1041,12 @@ function startPracticeWith(words) {
   showWord();
 }
 
+function practiceWeakWords() {
+  const weak = getWeakWords();
+  if (weak.length === 0) return;
+  startPracticeWith(weak);
+}
+
 function getTaskType() {
   if (state.exerciseType !== 'mix') return state.exerciseType;
   const types = ['context', 'definition', 'translation'];
@@ -733,7 +1055,6 @@ function getTaskType() {
 
 function getFirstLetterHint(word) {
   const parts = word.trim().split(/\s+/);
-  // Filter out small common words for hint display
   const skip = new Set(['to','a','an','the','in','on','of','for','at','up','out','by','with','off','down']);
   return parts.map(p => {
     if (skip.has(p.toLowerCase()) && parts.length > 1) return p;
@@ -748,44 +1069,36 @@ function showWord() {
   state.currentType = type;
   state.answered = false;
 
-  // Progress
   const pct = (state.currentIdx / state.words.length) * 100;
   document.getElementById('progress-fill').style.width = pct + '%';
   document.getElementById('progress-count').textContent = `${state.currentIdx + 1}/${state.words.length}`;
   document.getElementById('progress-score').textContent = `Score: ${state.score}`;
 
-  // Task label
   const label = document.getElementById('task-label');
   label.className = 'task-type-label ' + type;
   label.textContent = type === 'context' ? 'Complete the sentence' : type === 'definition' ? 'Guess the word' : 'Translate to English';
 
-  // Prompt
   const prompt = document.getElementById('quiz-prompt');
   if (type === 'context') {
     const hint = getFirstLetterHint(word.w);
-    const sentenceHtml = word.s.replace('_____', `<span class="gap">${hint}</span>`);
-    prompt.innerHTML = sentenceHtml;
+    prompt.innerHTML = word.s.replace('_____', `<span class="gap">${hint}</span>`);
   } else if (type === 'definition') {
     prompt.innerHTML = `<em>${word.d}</em>`;
   } else {
     prompt.innerHTML = `<span class="german-word">${word.g}</span>`;
   }
 
-  // Source tag
   document.getElementById('source-tag').textContent = word.source;
 
-  // Input
   const input = document.getElementById('answer-input');
   input.value = '';
   input.className = 'answer-input';
   input.disabled = false;
   input.focus();
 
-  // Feedback
   document.getElementById('feedback').className = 'feedback';
   document.getElementById('feedback').innerHTML = '';
 
-  // Buttons
   document.getElementById('check-btn').style.display = '';
   document.getElementById('skip-btn').style.display = '';
   document.getElementById('check-btn').textContent = 'Check';
@@ -793,12 +1106,7 @@ function showWord() {
 }
 
 function normalizeAnswer(str) {
-  return str.toLowerCase().trim()
-    .replace(/['']/g, "'")
-    .replace(/\s+/g, ' ')
-    .replace(/^to\s+/, '')
-    .replace(/^a\s+/, '')
-    .replace(/^an\s+/, '');
+  return str.toLowerCase().trim().replace(/['']/g, "'").replace(/\s+/g, ' ').replace(/^to\s+/, '').replace(/^a\s+/, '').replace(/^an\s+/, '');
 }
 
 function checkAnswer() {
@@ -816,7 +1124,7 @@ function checkAnswer() {
     state.score++;
     input.className = 'answer-input correct';
     feedback.className = 'feedback correct';
-    feedback.innerHTML = `Correct! ✓`;
+    feedback.innerHTML = 'Correct!';
   } else {
     input.className = 'answer-input wrong';
     feedback.className = 'feedback wrong';
@@ -826,7 +1134,7 @@ function checkAnswer() {
   state.results.push({ word, correct, userAnswer, type: state.currentType });
 
   input.disabled = true;
-  document.getElementById('check-btn').textContent = 'Next →';
+  document.getElementById('check-btn').textContent = 'Next';
   document.getElementById('check-btn').onclick = nextWord;
   document.getElementById('skip-btn').style.display = 'none';
 }
@@ -835,23 +1143,10 @@ function isCorrect(userAnswer, word) {
   const norm = normalizeAnswer(userAnswer);
   const expected = normalizeAnswer(word.w);
   if (norm === expected) return true;
-
-  // Check alternatives
-  if (word.a) {
-    for (const alt of word.a) {
-      if (norm === normalizeAnswer(alt)) return true;
-    }
-  }
-
-  // Fuzzy: strip punctuation and check
+  if (word.a) { for (const alt of word.a) { if (norm === normalizeAnswer(alt)) return true; } }
   const strip = s => s.replace(/[-_.,!?'"()]/g, '').replace(/\s+/g, ' ').trim();
   if (strip(norm) === strip(expected)) return true;
-  if (word.a) {
-    for (const alt of word.a) {
-      if (strip(norm) === strip(normalizeAnswer(alt))) return true;
-    }
-  }
-
+  if (word.a) { for (const alt of word.a) { if (strip(norm) === strip(normalizeAnswer(alt))) return true; } }
   return false;
 }
 
@@ -861,23 +1156,19 @@ function skipWord() {
   nextWord();
 }
 
-function nextWord() {
-  state.currentIdx++;
-  showWord();
-}
+function nextWord() { state.currentIdx++; showWord(); }
 
-function endPractice() {
+async function endPractice() {
   document.body.classList.remove('playing');
   showScreen('results-screen');
 
   const pct = state.words.length > 0 ? Math.round((state.score / state.words.length) * 100) : 0;
   document.getElementById('final-score').textContent = pct + '%';
   document.getElementById('final-label').textContent = `${state.score} of ${state.words.length} correct`;
+  document.getElementById('save-status').textContent = '';
 
   const list = document.getElementById('results-list');
   list.innerHTML = '';
-
-  // Show wrong answers first, then correct
   const sorted = [...state.results].sort((a, b) => a.correct - b.correct);
   for (const r of sorted) {
     const item = document.createElement('div');
@@ -889,6 +1180,8 @@ function endPractice() {
     `;
     list.appendChild(item);
   }
+
+  await saveSessionResults();
 }
 
 function retryWrong() {
@@ -899,7 +1192,7 @@ function retryWrong() {
 
 function goHome() {
   document.body.classList.remove('playing');
-  showScreen('home-screen');
+  showHomeScreen();
 }
 
 function showScreen(id) {
@@ -910,8 +1203,9 @@ function showScreen(id) {
 // Keyboard
 document.addEventListener('keydown', e => {
   if (e.key === 'Enter') {
-    const practiceScreen = document.getElementById('practice-screen');
-    if (practiceScreen.classList.contains('active')) {
+    if (document.getElementById('login-screen').classList.contains('active')) {
+      loginStudent();
+    } else if (document.getElementById('practice-screen').classList.contains('active')) {
       if (state.answered) nextWord();
       else checkAnswer();
     }
@@ -921,16 +1215,34 @@ document.addEventListener('keydown', e => {
 // Pull-to-refresh prevention
 (function() {
   let startY = 0;
-  document.addEventListener('touchstart', function(e) {
-    startY = e.touches[0].pageY;
-  }, { passive: true });
+  document.addEventListener('touchstart', function(e) { startY = e.touches[0].pageY; }, { passive: true });
   document.addEventListener('touchmove', function(e) {
-    const y = e.touches[0].pageY;
-    if (window.scrollY === 0 && y > startY) e.preventDefault();
+    if (window.scrollY === 0 && e.touches[0].pageY > startY) e.preventDefault();
   }, { passive: false });
 })();
 
-init();
+// ===== INIT =====
+(async function() {
+  // Check for saved session
+  const saved = localStorage.getItem('5b-vocab-student');
+  if (saved) {
+    try {
+      const { id, name } = JSON.parse(saved);
+      const doc = await studentsRef.doc(id).get();
+      if (doc.exists) {
+        state.studentId = id;
+        state.studentName = name;
+        state.studentData = doc.data();
+        await studentsRef.doc(id).update({ lastActive: firebase.firestore.FieldValue.serverTimestamp() });
+        await loadProgress();
+        showHomeScreen();
+        return;
+      }
+    } catch (e) { console.error('Auto-login error:', e); }
+    localStorage.removeItem('5b-vocab-student');
+  }
+  loadExistingStudents();
+})();
 </script>
 </body>
 </html>
