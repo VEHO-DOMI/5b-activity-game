@@ -1448,11 +1448,14 @@ function getTaskType() {
 
 function getFirstLetterHint(word) {
   const parts = word.trim().split(/\s+/);
-  const skip = new Set(['to','a','an','the','in','on','of','for','at','up','out','by','with','off','down']);
-  return parts.map(p => {
-    if (skip.has(p.toLowerCase()) && parts.length > 1) return p;
-    return p[0].toUpperCase() + '_'.repeat(Math.max(p.length - 1, 2));
-  }).join(' ');
+  const skip = new Set(['to','a','an','the','in','on','of','for','at','up','out','by','with','off','down','someone','something']);
+  if (parts.length === 1) {
+    return parts[0][0].toLowerCase() + '_'.repeat(Math.max(parts[0].length - 1, 2));
+  }
+  // Multi-word: show only content words' first letters
+  const contentParts = parts.filter(p => !skip.has(p.toLowerCase()));
+  if (contentParts.length === 0) return parts.map(p => p[0].toLowerCase() + '___').join(' ');
+  return contentParts.map(p => p[0].toLowerCase() + '_'.repeat(Math.max(p.length - 1, 2))).join(' ... ');
 }
 
 function showWord() {
