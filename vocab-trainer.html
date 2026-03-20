@@ -560,8 +560,9 @@ body.playing h1, body.playing .subtitle { display: none; }
   <div class="card">
     <h3>Exercise Type</h3>
     <div class="type-grid" id="type-grid">
-      <button class="type-btn selected" data-type="mix" onclick="selectType(this)" title="Random mix of all three exercise types">Mix</button>
-      <button class="type-btn" data-type="context" onclick="selectType(this)" title="Complete the sentence — fill in the missing word using context clues and the first letter hint">Context</button>
+      <button class="type-btn selected" data-type="mix" onclick="selectType(this)" title="Random mix of all exercise types">Mix</button>
+      <button class="type-btn" data-type="context" onclick="selectType(this)" title="Complete the sentence — first letter + exact letter count shown">Context (easy)</button>
+      <button class="type-btn" data-type="context-hard" onclick="selectType(this)" title="Complete the sentence — only the first letter is shown, no letter count">Context (hard)</button>
       <button class="type-btn" data-type="definition" onclick="selectType(this)" title="Read an English definition and guess which word it describes">Definition</button>
       <button class="type-btn" data-type="translation" onclick="selectType(this)" title="See the German word and type the English translation">Translation</button>
     </div>
@@ -1667,20 +1668,29 @@ function practiceWeakWords() {
 
 function getTaskType() {
   if (state.exerciseType !== 'mix') return state.exerciseType;
-  const types = ['context', 'definition', 'translation'];
+  const types = ['context', 'context-hard', 'definition', 'translation'];
   return types[Math.floor(Math.random() * types.length)];
 }
 
-function getFirstLetterHint(word) {
-  const parts = word.trim().split(/\s+/);
-  const skip = new Set(['to','a','an','the','in','on','of','for','at','up','out','by','with','off','down','someone','something']);
-  if (parts.length === 1) {
-    return parts[0][0].toLowerCase() + '_'.repeat(Math.max(parts[0].length - 1, 2));
+function getFirstLetterHint(word, showLetterCount) {
+  // Split on spaces and hyphens (keep separators)
+  const parts = word.trim().split(/(\s+|-)/);
+  const small = new Set(['to','a','an','the','in','on','of','for','at','up','out','by','with','off','down']);
+  if (showLetterCount) {
+    // Easy: show small words fully, content words get first letter + exact underscore count
+    return parts.map(p => {
+      if (/^[\s-]+$/.test(p)) return p;
+      if (small.has(p.toLowerCase()) && parts.filter(x => !/^[\s-]+$/.test(x)).length > 1) return p;
+      return p[0].toLowerCase() + '_'.repeat(Math.max(p.length - 1, 1));
+    }).join('');
+  } else {
+    // Hard: show small words fully, content words get just first letter + short gap
+    return parts.map(p => {
+      if (/^[\s-]+$/.test(p)) return p;
+      if (small.has(p.toLowerCase()) && parts.filter(x => !/^[\s-]+$/.test(x)).length > 1) return p;
+      return p[0].toLowerCase() + '____';
+    }).join('');
   }
-  // Multi-word: show only content words' first letters
-  const contentParts = parts.filter(p => !skip.has(p.toLowerCase()));
-  if (contentParts.length === 0) return parts.map(p => p[0].toLowerCase() + '___').join(' ');
-  return contentParts.map(p => p[0].toLowerCase() + '_'.repeat(Math.max(p.length - 1, 2))).join(' ... ');
 }
 
 function showWord() {
@@ -1696,12 +1706,14 @@ function showWord() {
   document.getElementById('progress-score').textContent = `Score: ${state.score}`;
 
   const label = document.getElementById('task-label');
-  label.className = 'task-type-label ' + type;
-  label.textContent = type === 'context' ? 'Complete the sentence' : type === 'definition' ? 'Guess the word' : 'Translate to English';
+  const isContext = type === 'context' || type === 'context-hard';
+  label.className = 'task-type-label ' + (isContext ? 'context' : type);
+  label.textContent = isContext ? 'Complete the sentence' : type === 'definition' ? 'Guess the word' : 'Translate to English';
 
   const prompt = document.getElementById('quiz-prompt');
-  if (type === 'context') {
-    const hint = getFirstLetterHint(word.w);
+  if (isContext) {
+    const showLetterCount = type === 'context';
+    const hint = getFirstLetterHint(word.w, showLetterCount);
     prompt.innerHTML = word.s.replace('_____', `<span class="gap">${hint}</span>`);
   } else if (type === 'definition') {
     prompt.innerHTML = `<em>${word.d}</em>`;
