@@ -733,56 +733,94 @@ function getAudio() {
   return audioCtx;
 }
 
-function playTone(freq, duration, type = 'sine', vol = 0.3) {
+function playTone(freq, duration, type = 'sine', vol = 0.3, delay = 0) {
   const ctx = getAudio();
+  const t = ctx.currentTime + delay;
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
   osc.type = type;
   osc.frequency.value = freq;
-  gain.gain.setValueAtTime(vol, ctx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+  gain.gain.setValueAtTime(vol, t);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
   osc.connect(gain);
   gain.connect(ctx.destination);
-  osc.start(ctx.currentTime);
-  osc.stop(ctx.currentTime + duration);
+  osc.start(t);
+  osc.stop(t + duration);
+}
+
+function playNoise(duration, vol = 0.3, delay = 0) {
+  const ctx = getAudio();
+  const t = ctx.currentTime + delay;
+  const bufSize = ctx.sampleRate * duration;
+  const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < bufSize; i++) data[i] = (Math.random() * 2 - 1);
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(vol, t);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+  src.connect(gain);
+  gain.connect(ctx.destination);
+  src.start(t);
+  src.stop(t + duration);
 }
 
 function sfxCorrect() {
-  // Rising two-tone "ding"
-  playTone(600, 0.12, 'sine', 0.25);
-  setTimeout(() => playTone(900, 0.18, 'sine', 0.25), 80);
+  // Bright game-show "ding ding!" — major chord hit
+  const ctx = getAudio();
+  [523, 659, 784, 1047].forEach((f, i) => {
+    playTone(f, 0.3, 'sine', 0.18, i * 0.01);
+  });
+  playTone(1047, 0.4, 'sine', 0.12, 0.08);
 }
 
 function sfxSkip() {
-  // Quick low whoosh
-  playTone(300, 0.15, 'triangle', 0.2);
-  setTimeout(() => playTone(200, 0.1, 'triangle', 0.15), 60);
+  // Quick descending "womp" — game show wrong/pass
+  playTone(400, 0.12, 'triangle', 0.2);
+  playTone(280, 0.15, 'triangle', 0.18, 0.06);
+  playTone(180, 0.12, 'triangle', 0.1, 0.12);
 }
 
 function sfxCountdownBeep() {
-  // Short high beep
-  playTone(880, 0.1, 'square', 0.15);
+  // Harsh, urgent game-show countdown tick
+  const ctx = getAudio();
+  playTone(1200, 0.08, 'square', 0.35);
+  playTone(1200, 0.06, 'square', 0.2, 0.1);
+  playNoise(0.03, 0.15);
 }
 
 function sfxBuzzer() {
-  // Harsh buzzer sound
+  // Loud, harsh game-show buzzer — layered for intensity
   const ctx = getAudio();
-  const osc1 = ctx.createOscillator();
+  const t = ctx.currentTime;
+  // Layer 1: detuned sawtooth pair (fat buzzing)
+  [80, 83, 160, 163].forEach(f => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.value = f;
+    gain.gain.setValueAtTime(0.2, t);
+    gain.gain.setValueAtTime(0.2, t + 0.6);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 1.0);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(t);
+    osc.stop(t + 1.0);
+  });
+  // Layer 2: square wave grit
   const osc2 = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc1.type = 'sawtooth';
-  osc1.frequency.value = 150;
+  const g2 = ctx.createGain();
   osc2.type = 'square';
-  osc2.frequency.value = 155;
-  gain.gain.setValueAtTime(0.3, ctx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
-  osc1.connect(gain);
-  osc2.connect(gain);
-  gain.connect(ctx.destination);
-  osc1.start(ctx.currentTime);
-  osc2.start(ctx.currentTime);
-  osc1.stop(ctx.currentTime + 0.8);
-  osc2.stop(ctx.currentTime + 0.8);
+  osc2.frequency.value = 120;
+  g2.gain.setValueAtTime(0.15, t);
+  g2.gain.exponentialRampToValueAtTime(0.001, t + 0.9);
+  osc2.connect(g2);
+  g2.connect(ctx.destination);
+  osc2.start(t);
+  osc2.stop(t + 0.9);
+  // Layer 3: noise burst for harshness
+  playNoise(0.5, 0.12);
 }
 
 // Track which seconds we've beeped for (avoid double-beeping)
@@ -795,7 +833,8 @@ let state = {
   groups: [],          // [{name, score}]
   currentGroupIdx: 0,
   currentCategory: null,
-  usedWordIds: new Set(),       // indices into ALL_WORDS — persists entire game
+  usedWordIds: new Set(),       // indices of CORRECT words — permanently out of game
+  roundSkippedIds: new Set(),   // indices skipped THIS round — avoid repeats within round only
   roundWords: [],               // [{wordIdx, result:'correct'|'skipped'}]
   roundScore: 0,
   timer: null,
@@ -880,7 +919,7 @@ function renderScoreboard(containerId) {
 // ============================================================
 function getWordsForCategory(cat) {
   return ALL_WORDS.map((w, i) => ({ ...w, idx: i }))
-    .filter(w => w.categories.includes(cat) && !state.usedWordIds.has(w.idx));
+    .filter(w => w.categories.includes(cat) && !state.usedWordIds.has(w.idx) && !state.roundSkippedIds.has(w.idx));
 }
 
 function pickCategory(cat) {
@@ -893,6 +932,7 @@ function pickCategory(cat) {
   state.roundWords = [];
   state.roundScore = 0;
   state.history = [];
+  state.roundSkippedIds = new Set();
   state.timeLeft = 60;
   state.roundActive = true;
   beepedSeconds = new Set();
@@ -983,7 +1023,7 @@ function skipWord() {
   if (!state.roundActive) return;
   sfxSkip();
   const idx = state.currentWordIdx;
-  state.usedWordIds.add(idx);
+  state.roundSkippedIds.add(idx);  // Only skip for this round, stays in pool for future rounds
   state.roundWords.push({ wordIdx: idx, result: 'skipped' });
   state.history.push({ action: 'skip', wordIdx: idx });
   document.getElementById('undo-btn').disabled = false;
@@ -993,12 +1033,14 @@ function skipWord() {
 function undoLast() {
   if (state.history.length === 0) return;
   const last = state.history.pop();
-  state.usedWordIds.delete(last.wordIdx);
-  state.roundWords.pop();
   if (last.action === 'correct') {
+    state.usedWordIds.delete(last.wordIdx);
     state.roundScore--;
     document.getElementById('round-score-num').textContent = state.roundScore;
+  } else {
+    state.roundSkippedIds.delete(last.wordIdx);
   }
+  state.roundWords.pop();
   // Show the undone word again
   state.currentWordIdx = last.wordIdx;
   document.getElementById('word-text').textContent = ALL_WORDS[last.wordIdx].text;
@@ -1040,6 +1082,7 @@ function undoRound() {
   state.groups[state.currentGroupIdx].score = state.roundUndoSnapshot.groupScore;
   state.roundWords = [];
   state.roundScore = 0;
+  state.roundSkippedIds = new Set();
   state.history = [];
   state.roundUndoSnapshot = null;
   showScreen('pick');
@@ -1062,9 +1105,10 @@ function confirmResetRound() {
   showOverlay('Reset Round?', 'The timer will restart. Words used this round will stay marked as used.', () => {
     clearInterval(state.timer);
     state.roundActive = false;
-    // Words stay used! Only reset round score/state
+    // Only correctly solved words stay used; skipped go back to pool
     state.roundWords = [];
     state.roundScore = 0;
+    state.roundSkippedIds = new Set();
     state.history = [];
     showScreen('pick');
     closeOverlay();
@@ -1076,7 +1120,7 @@ function confirmResetGame() {
     clearInterval(state.timer);
     state = {
       groups: [], currentGroupIdx: 0, currentCategory: null,
-      usedWordIds: new Set(), roundWords: [], roundScore: 0,
+      usedWordIds: new Set(), roundSkippedIds: new Set(), roundWords: [], roundScore: 0,
       timer: null, timeLeft: 60, gameStarted: false, roundActive: false,
       currentWordIdx: null, history: [], roundUndoSnapshot: null,
     };
