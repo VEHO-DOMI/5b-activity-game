@@ -72,8 +72,12 @@ h1 span {
   -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
 }
 .subtitle {
-  color: var(--muted); font-size: 0.72rem; margin-bottom: 1.6rem; letter-spacing: 0.2em;
+  color: var(--muted); font-size: 0.72rem; margin-bottom: 0.4rem; letter-spacing: 0.2em;
   text-transform: uppercase; font-weight: 600;
+}
+.school-name {
+  color: rgba(255,255,255,0.2); font-size: 0.62rem; text-align: center;
+  max-width: 320px; line-height: 1.4; margin-bottom: 1.6rem; font-weight: 500;
 }
 
 /* Screen transitions */
@@ -374,7 +378,8 @@ h1 span {
 @media (min-width: 768px) {
   .screen { max-width: 680px; padding: 0 2rem; }
   h1 { font-size: 2.6rem; margin: 2rem 0 0.2rem; }
-  .subtitle { font-size: 0.82rem; margin-bottom: 2rem; letter-spacing: 0.25em; }
+  .subtitle { font-size: 0.82rem; margin-bottom: 0.5rem; letter-spacing: 0.25em; }
+  .school-name { font-size: 0.7rem; max-width: 420px; margin-bottom: 2rem; }
 
   .welcome-bar { margin-bottom: 1.2rem; }
   .welcome-name { font-size: 1.4rem; }
@@ -591,6 +596,7 @@ body.playing h1, body.playing .subtitle { display: none; }
 
 <h1><span>5B Vocab Trainer</span></h1>
 <p class="subtitle">Practice &bull; Learn &bull; Master</p>
+<p class="school-name">VEHO &ndash; Gymnasium und wirtschaftskundliches Realgymnasium der Dominikanerinnen</p>
 
 <!-- LOGIN SCREEN -->
 <div id="login-screen" class="screen active">
