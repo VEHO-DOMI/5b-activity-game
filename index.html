@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f0f1a">
+<title>5B Activity Game</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --draw: #ef4444;
+    --draw-glow: rgba(239,68,68,0.25);
+    --explain: #3b82f6;
+    --explain-glow: rgba(59,130,246,0.25);
+    --show: #22c55e;
+    --show-glow: rgba(34,197,94,0.25);
+    --bg: #0f0f1a;
+    --bg2: #161625;
+    --card: rgba(255,255,255,0.04);
+    --card-border: rgba(255,255,255,0.08);
+    --card-hover: rgba(255,255,255,0.07);
+    --text: #f1f1f4;
+    --text-secondary: #a1a1b5;
+    --muted: #6b6b80;
+    --accent: #f43f5e;
+    --accent-glow: rgba(244,63,94,0.3);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  button, input { touch-action: manipulation; }
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99,59,171,0.15), transparent),
+      radial-gradient(ellipse 60% 40% at 80% 100%, rgba(244,63,94,0.08), transparent);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: env(safe-area-inset-top) 0 calc(env(safe-area-inset-bottom) + 1.5rem);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Header */
+  h1 {
+    font-size: 2rem; margin: 1.5rem 0 0.2rem; font-weight: 800;
+    letter-spacing: -0.03em;
+  }
+  h1 span {
+    background: linear-gradient(135deg, var(--accent), #fb923c);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .subtitle {
+    color: var(--muted); font-size: 0.8rem; margin-bottom: 1.5rem;
+    letter-spacing: 0.15em; text-transform: uppercase; font-weight: 500;
+  }
+
+  /* Screens */
+  .screen { display: none; width: 100%; max-width: 480px; padding: 0 1.25rem; }
+  .screen.active {
+    display: flex; flex-direction: column; align-items: center;
+    animation: fadeIn 0.25s ease-out;
+  }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+  /* Setup screen */
+  .setup-section { width: 100%; margin-bottom: 1.5rem; }
+  .setup-section label {
+    display: block; font-weight: 600; margin-bottom: 0.6rem; font-size: 0.8rem;
+    text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-secondary);
+  }
+  .setup-section input {
+    width: 100%; padding: 0.75rem 1rem; border-radius: 12px;
+    border: 1.5px solid var(--card-border); background: var(--card);
+    color: var(--text); font-size: 0.95rem; font-family: inherit;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    backdrop-filter: blur(10px);
+  }
+  .setup-section input:focus {
+    border-color: var(--accent); outline: none;
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+  .setup-section input::placeholder { color: var(--muted); }
+  .group-row {
+    display: flex; gap: 0.5rem; margin-bottom: 0.6rem; align-items: center;
+  }
+  .group-row input { flex: 1; }
+  .group-row button {
+    background: rgba(239,68,68,0.15); border: 1.5px solid rgba(239,68,68,0.3);
+    color: #f87171; width: 36px; height: 36px; border-radius: 10px;
+    cursor: pointer; font-size: 1.1rem; flex-shrink: 0;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .group-row button:hover { background: rgba(239,68,68,0.25); border-color: rgba(239,68,68,0.5); }
+  .add-group-btn {
+    background: var(--card); border: 1.5px dashed var(--card-border); color: var(--muted);
+    padding: 0.6rem; border-radius: 12px; cursor: pointer; width: 100%;
+    font-size: 0.85rem; font-family: inherit; font-weight: 500;
+    transition: border-color 0.2s, color 0.2s, background 0.2s;
+  }
+  .add-group-btn:hover {
+    border-color: var(--accent); color: var(--text);
+    background: rgba(244,63,94,0.05);
+  }
+
+  /* Buttons */
+  .btn {
+    padding: 0.7rem 1.4rem; border: none; border-radius: 12px; font-size: 0.9rem;
+    cursor: pointer; font-weight: 600; font-family: inherit;
+    transition: transform 0.12s, box-shadow 0.2s, background 0.15s;
+    letter-spacing: -0.01em;
+  }
+  .btn:hover { transform: translateY(-1px); }
+  .btn:active { transform: scale(0.97) translateY(0); }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), #e11d48);
+    color: white; box-shadow: 0 2px 12px var(--accent-glow);
+  }
+  .btn-primary:hover { box-shadow: 0 4px 20px var(--accent-glow); }
+  .btn-primary:disabled { opacity: 0.35; cursor: not-allowed; box-shadow: none; }
+  .btn-secondary {
+    background: rgba(255,255,255,0.06); color: var(--text-secondary);
+    border: 1.5px solid var(--card-border);
+  }
+  .btn-secondary:hover { background: rgba(255,255,255,0.1); color: var(--text); }
+  .btn-success {
+    background: linear-gradient(135deg, var(--show), #16a34a);
+    color: white; box-shadow: 0 2px 12px var(--show-glow);
+  }
+  .btn-success:hover { box-shadow: 0 4px 20px var(--show-glow); }
+  .btn-danger {
+    background: rgba(239,68,68,0.15); color: #f87171;
+    border: 1.5px solid rgba(239,68,68,0.25);
+  }
+  .btn-danger:hover { background: rgba(239,68,68,0.25); }
+  .btn-small { padding: 0.45rem 0.9rem; font-size: 0.8rem; }
+  .btn-block { width: 100%; }
+
+  /* Scoreboard */
+  .scoreboard {
+    width: 100%; background: var(--card); border: 1.5px solid var(--card-border);
+    border-radius: 16px; padding: 1rem 1.2rem; margin-bottom: 1.2rem;
+    backdrop-filter: blur(10px);
+  }
+  .scoreboard h3 {
+    margin-bottom: 0.6rem; font-size: 0.7rem; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600;
+  }
+  .score-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+    transition: background 0.15s;
+  }
+  .score-row:last-child { border-bottom: none; }
+  .score-row .group-name { font-weight: 600; font-size: 0.9rem; }
+  .score-row .score {
+    font-size: 1.15rem; font-weight: 800; color: var(--accent);
+    font-variant-numeric: tabular-nums;
+  }
+  .score-row.current {
+    background: rgba(244,63,94,0.08); border-radius: 8px;
+    padding: 0.5rem 0.7rem; margin: 0.1rem -0.7rem;
+    border-bottom-color: transparent;
+  }
+
+  /* Category pick */
+  .category-picker {
+    display: flex; gap: 0.7rem; margin: 1.2rem 0 1.5rem; flex-wrap: wrap; justify-content: center;
+    width: 100%;
+  }
+  .cat-btn {
+    padding: 1.3rem 1rem; border-radius: 16px; border: none;
+    font-size: 1rem; font-weight: 700; cursor: pointer; flex: 1; min-width: 120px;
+    transition: transform 0.2s, box-shadow 0.2s; text-align: center;
+    font-family: inherit; letter-spacing: -0.01em; position: relative; overflow: hidden;
+  }
+  .cat-btn::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(255,255,255,0.12) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  .cat-btn:hover { transform: translateY(-4px); }
+  .cat-btn:active { transform: translateY(-1px); }
+  .cat-draw {
+    background: linear-gradient(135deg, var(--draw), #dc2626); color: white;
+    box-shadow: 0 4px 20px var(--draw-glow);
+  }
+  .cat-draw:hover { box-shadow: 0 8px 30px var(--draw-glow); }
+  .cat-explain {
+    background: linear-gradient(135deg, var(--explain), #2563eb); color: white;
+    box-shadow: 0 4px 20px var(--explain-glow);
+  }
+  .cat-explain:hover { box-shadow: 0 8px 30px var(--explain-glow); }
+  .cat-show {
+    background: linear-gradient(135deg, var(--show), #16a34a); color: white;
+    box-shadow: 0 4px 20px var(--show-glow);
+  }
+  .cat-show:hover { box-shadow: 0 8px 30px var(--show-glow); }
+  .cat-icon { display: block; font-size: 1.6rem; margin-bottom: 0.3rem; }
+
+  /* Game play */
+  .timer-bar {
+    width: 100%; height: 6px; background: rgba(255,255,255,0.06);
+    border-radius: 3px; margin-bottom: 0.8rem; overflow: hidden;
+  }
+  .timer-fill {
+    height: 100%; border-radius: 3px; transition: width 0.1s linear;
+    box-shadow: 0 0 10px currentColor;
+  }
+  .timer-text {
+    font-size: 3.5rem; font-weight: 900; margin-bottom: 0.3rem;
+    font-variant-numeric: tabular-nums; letter-spacing: -0.04em;
+    line-height: 1;
+  }
+  .timer-text.warning { color: #f59e0b; }
+  .timer-text.danger { color: var(--draw); animation: pulse 0.5s infinite alternate; }
+  @keyframes pulse { to { opacity: 0.4; } }
+
+  .category-label {
+    font-size: 0.75rem; font-weight: 700; padding: 0.3rem 1rem;
+    border-radius: 20px; margin-bottom: 0.8rem; text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  .category-label.draw { background: rgba(239,68,68,0.2); color: #fca5a5; }
+  .category-label.explain { background: rgba(59,130,246,0.2); color: #93c5fd; }
+  .category-label.show { background: rgba(34,197,94,0.2); color: #86efac; }
+
+  .word-card {
+    background: var(--card); border: 1.5px solid var(--card-border);
+    border-radius: 20px; padding: 2.5rem 2rem; width: 100%;
+    text-align: center; margin-bottom: 1.2rem; min-height: 140px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    backdrop-filter: blur(10px);
+    animation: wordPop 0.2s ease-out;
+  }
+  @keyframes wordPop {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .word-text {
+    font-size: 1.7rem; font-weight: 800; line-height: 1.3;
+    letter-spacing: -0.02em;
+  }
+  .word-source {
+    font-size: 0.7rem; color: var(--muted); margin-top: 0.6rem;
+    font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em;
+  }
+
+  .game-actions {
+    display: flex; gap: 0.6rem; width: 100%; justify-content: center;
+  }
+  .game-actions .btn { flex: 1; min-width: 80px; }
+
+  .round-score {
+    font-size: 0.9rem; margin-bottom: 1rem; color: var(--muted); font-weight: 500;
+  }
+  .round-score strong {
+    color: var(--text); font-size: 1.5rem; font-weight: 800;
+    margin-left: 0.15rem;
+  }
+
+  /* Round summary */
+  .summary-card {
+    background: var(--card); border: 1.5px solid var(--card-border);
+    border-radius: 20px; padding: 2rem 1.5rem; width: 100%;
+    text-align: center; margin-bottom: 1.2rem;
+    backdrop-filter: blur(10px);
+  }
+  .summary-card h2 { margin-bottom: 0.3rem; font-weight: 700; font-size: 1.1rem; color: var(--text-secondary); }
+  .summary-points {
+    font-size: 3.5rem; font-weight: 900; letter-spacing: -0.04em; line-height: 1.1;
+    background: linear-gradient(135deg, var(--accent), #fb923c);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .summary-subtitle { color: var(--muted); font-size: 0.8rem; margin-top: 0.2rem; font-weight: 500; }
+  .summary-words {
+    margin-top: 1.2rem; text-align: left;
+    border-top: 1px solid rgba(255,255,255,0.06); padding-top: 0.8rem;
+  }
+  .summary-words li {
+    padding: 0.4rem 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+    list-style: none; display: flex; justify-content: space-between;
+    font-size: 0.9rem; font-weight: 500;
+  }
+  .summary-words li:last-child { border-bottom: none; }
+  .summary-words .correct { color: var(--show); font-weight: 600; }
+  .summary-words .skipped { color: var(--muted); }
+
+  .action-bar { display: flex; gap: 0.6rem; width: 100%; margin-top: 0.3rem; }
+  .action-bar .btn { flex: 1; }
+
+  /* Final screen */
+  .final-scores { width: 100%; }
+  .final-row {
+    display: flex; align-items: center;
+    padding: 1rem 1.2rem; background: var(--card); border: 1.5px solid var(--card-border);
+    border-radius: 14px; margin-bottom: 0.6rem; backdrop-filter: blur(10px);
+  }
+  .final-row.winner {
+    border-color: rgba(250,204,21,0.4);
+    background: rgba(250,204,21,0.06);
+    box-shadow: 0 4px 20px rgba(250,204,21,0.1);
+  }
+  .final-row .rank { font-size: 1.6rem; margin-right: 1rem; flex-shrink: 0; }
+  .final-row .name { font-weight: 600; flex: 1; font-size: 0.95rem; }
+  .final-row .pts {
+    font-size: 1.5rem; font-weight: 900; color: var(--accent);
+    font-variant-numeric: tabular-nums; letter-spacing: -0.03em;
+  }
+
+  /* Info strip */
+  .info-strip {
+    display: flex; justify-content: space-between; width: 100%; color: var(--muted);
+    font-size: 0.75rem; margin-bottom: 0.6rem; padding: 0 0.2rem;
+    font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em;
+  }
+
+  /* Bottom actions row */
+  .bottom-actions {
+    margin-top: 1.2rem; display: flex; gap: 0.5rem;
+  }
+
+  /* Mobile: hide header during gameplay to save space */
+  @media (max-width: 600px) {
+    body.playing h1, body.playing .subtitle { display: none; }
+    body.playing { padding-bottom: 1rem; }
+    body.playing .screen { padding-top: 0.5rem; }
+  }
+
+  /* Responsive */
+  @media (max-width: 480px) {
+    h1 { font-size: 1.6rem; margin-top: 1.2rem; }
+    .subtitle { margin-bottom: 1rem; }
+    .screen { padding: 0 1rem; }
+
+    /* Play screen: tighter spacing */
+    .timer-bar { margin-bottom: 0.4rem; }
+    .timer-text { font-size: 2.8rem; margin-bottom: 0.15rem; }
+    .category-label { margin-bottom: 0.4rem; padding: 0.2rem 0.8rem; font-size: 0.7rem; }
+    .round-score { margin-bottom: 0.6rem; font-size: 0.85rem; }
+    .round-score strong { font-size: 1.2rem; }
+    .word-card { padding: 1.5rem 1.2rem; min-height: 100px; margin-bottom: 0.8rem; border-radius: 16px; }
+    .word-text { font-size: 1.4rem; }
+    .game-actions { gap: 0.4rem; }
+    .game-actions .btn { padding: 0.65rem 0.5rem; font-size: 0.85rem; }
+    .bottom-actions { margin-top: 0.8rem; }
+    .bottom-actions .btn { padding: 0.4rem 0.7rem; font-size: 0.75rem; }
+
+    /* Category buttons */
+    .category-picker { gap: 0.5rem; margin: 0.8rem 0 1rem; }
+    .cat-btn { padding: 1rem 0.6rem; font-size: 0.9rem; min-width: 90px; border-radius: 14px; }
+    .cat-icon { font-size: 1.3rem; margin-bottom: 0.2rem; }
+
+    /* Scoreboard */
+    .scoreboard { padding: 0.8rem 1rem; margin-bottom: 0.8rem; border-radius: 14px; }
+    .score-row .group-name { font-size: 0.85rem; }
+    .score-row .score { font-size: 1rem; }
+
+    /* Summary */
+    .summary-card { padding: 1.5rem 1.2rem; border-radius: 16px; }
+    .summary-points { font-size: 2.8rem; }
+
+    /* Final */
+    .final-row { padding: 0.8rem 1rem; }
+    .final-row .rank { font-size: 1.3rem; margin-right: 0.7rem; }
+    .final-row .pts { font-size: 1.3rem; }
+  }
+
+  /* Confirmation overlay */
+  .overlay {
+    display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.6); z-index: 100;
+    justify-content: center; align-items: center;
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  }
+  .overlay.active { display: flex; }
+  .overlay-card {
+    background: var(--bg2); border: 1.5px solid var(--card-border);
+    border-radius: 20px; padding: 2rem;
+    max-width: 360px; width: 90%; text-align: center;
+    animation: overlayIn 0.2s ease-out;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  @keyframes overlayIn {
+    from { opacity: 0; transform: scale(0.92); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .overlay-card h3 { margin-bottom: 0.6rem; font-weight: 700; font-size: 1.1rem; }
+  .overlay-card p { color: var(--text-secondary); margin-bottom: 1.2rem; font-size: 0.85rem; line-height: 1.4; }
+  .overlay-actions { display: flex; gap: 0.5rem; }
+  .overlay-actions .btn { flex: 1; }
+
+  /* Times up animation */
+  .times-up { animation: shake 0.4s ease-out; }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-6px); }
+    40% { transform: translateX(6px); }
+    60% { transform: translateX(-4px); }
+    80% { transform: translateX(4px); }
+  }
+</style>
+</head>
+<body>
+
+<h1>5B <span>Activity</span> Game</h1>
+<p class="subtitle">Draw &bull; Explain &bull; Show</p>
+
+<!-- SCREEN: Setup -->
+<div id="setup-screen" class="screen active">
+  <div class="setup-section">
+    <label>Group Names</label>
+    <div id="groups-container">
+      <div class="group-row">
+        <input type="text" placeholder="Group 1" class="group-input" maxlength="30">
+        <button onclick="removeGroup(this)" title="Remove">&times;</button>
+      </div>
+      <div class="group-row">
+        <input type="text" placeholder="Group 2" class="group-input" maxlength="30">
+        <button onclick="removeGroup(this)" title="Remove">&times;</button>
+      </div>
+    </div>
+    <button class="add-group-btn" onclick="addGroup()">+ Add Group</button>
+  </div>
+  <button class="btn btn-primary btn-block" onclick="startGame()" id="start-btn">Start Game</button>
+</div>
+
+<!-- SCREEN: Category Pick -->
+<div id="pick-screen" class="screen">
+  <div class="scoreboard" id="pick-scoreboard"></div>
+  <div class="info-strip">
+    <span id="pick-group-label"></span>
+    <span id="words-remaining"></span>
+  </div>
+  <p style="margin-bottom:0.2rem; font-size:1.05rem; font-weight:600;" id="pick-prompt"></p>
+  <div class="category-picker">
+    <button class="cat-btn cat-draw" onclick="pickCategory('draw')"><span class="cat-icon">&#9998;</span>Draw</button>
+    <button class="cat-btn cat-explain" onclick="pickCategory('explain')"><span class="cat-icon">&#128172;</span>Explain</button>
+    <button class="cat-btn cat-show" onclick="pickCategory('show')"><span class="cat-icon">&#127917;</span>Show</button>
+  </div>
+  <div class="bottom-actions">
+    <button class="btn btn-secondary btn-small" onclick="confirmResetGame()">Reset Game</button>
+    <button class="btn btn-secondary btn-small" onclick="endGameEarly()">End Game</button>
+  </div>
+</div>
+
+<!-- SCREEN: Playing -->
+<div id="play-screen" class="screen">
+  <div class="timer-bar"><div class="timer-fill" id="timer-fill"></div></div>
+  <div class="timer-text" id="timer-text">60</div>
+  <div class="category-label" id="cat-label"></div>
+  <div class="round-score">Round score: <strong id="round-score-num">0</strong></div>
+  <div class="word-card">
+    <div class="word-text" id="word-text">—</div>
+    <div class="word-source" id="word-source"></div>
+  </div>
+  <div class="game-actions">
+    <button class="btn btn-success" onclick="markCorrect()" id="correct-btn">&#10003; Correct</button>
+    <button class="btn btn-secondary" onclick="skipWord()">Skip</button>
+    <button class="btn btn-danger btn-small" onclick="undoLast()" id="undo-btn" disabled>Undo</button>
+  </div>
+  <div class="bottom-actions">
+    <button class="btn btn-secondary btn-small" onclick="confirmResetRound()">Reset Round</button>
+    <button class="btn btn-secondary btn-small" onclick="confirmResetGame()">Reset Game</button>
+  </div>
+</div>
+
+<!-- SCREEN: Round Summary -->
+<div id="summary-screen" class="screen">
+  <div class="summary-card">
+    <h2 id="summary-group">Group</h2>
+    <div class="summary-points" id="summary-points">0</div>
+    <p class="summary-subtitle">points this round</p>
+    <ul class="summary-words" id="summary-words"></ul>
+  </div>
+  <div class="scoreboard" id="summary-scoreboard"></div>
+  <div class="action-bar">
+    <button class="btn btn-secondary" onclick="undoRound()">&#8617; Undo Round</button>
+    <button class="btn btn-primary" onclick="nextTurn()">Next Turn &rarr;</button>
+  </div>
+</div>
+
+<!-- SCREEN: Final -->
+<div id="final-screen" class="screen">
+  <h2 style="margin-bottom:1.2rem; font-size:1.5rem; font-weight:800; letter-spacing:-0.03em;">Game Over!</h2>
+  <div class="final-scores" id="final-scores"></div>
+  <button class="btn btn-primary btn-block" style="margin-top:1.5rem;" onclick="newGame()">New Game</button>
+</div>
+
+<!-- Confirmation Overlay -->
+<div class="overlay" id="confirm-overlay">
+  <div class="overlay-card">
+    <h3 id="confirm-title">Are you sure?</h3>
+    <p id="confirm-msg"></p>
+    <div class="overlay-actions">
+      <button class="btn btn-secondary" onclick="closeOverlay()">Cancel</button>
+      <button class="btn btn-danger" id="confirm-action-btn">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// VOCABULARY DATA
+// Each word: { text, german, categories: ['draw','explain','show'], source }
+// ============================================================
+const ALL_WORDS = [
+  // ===== VOCABULARY LIST 1 =====
+  {text:"putting on a front",german:"sich verstellen",categories:["show","explain"],source:"List 1"},
+  {text:"boarding school",german:"Internat",categories:["draw","explain"],source:"List 1"},
+  {text:"on duty",german:"im Einsatz",categories:["show","explain"],source:"List 1"},
+  {text:"to take a liking to someone",german:"an jemandem Gefallen finden",categories:["show"],source:"List 1"},
+  {text:"to be spent",german:"erschöpft; erledigt",categories:["show"],source:"List 1"},
+  {text:"learning a trade",german:"ein Handwerk erlernen",categories:["explain","show"],source:"List 1"},
+  {text:"acquaintance",german:"Bekannter",categories:["explain"],source:"List 1"},
+  {text:"anxious",german:"ängstlich",categories:["show","draw"],source:"List 1"},
+  {text:"window-shopper",german:"Schaufensterbummler",categories:["show","draw"],source:"List 1"},
+  {text:"addictive",german:"süchtig machend",categories:["explain","show"],source:"List 1"},
+  {text:"invasion of privacy",german:"in die Privatsphäre eindringen",categories:["explain","show"],source:"List 1"},
+  {text:"stalker",german:"Stalker",categories:["show","explain"],source:"List 1"},
+  {text:"conversation starter",german:"Gesprächsöffner",categories:["explain","show"],source:"List 1"},
+  {text:"to make someone's life a misery",german:"jemandem das Leben schwer machen",categories:["show","explain"],source:"List 1"},
+
+  // ===== VOCABULARY LIST 2 =====
+  {text:"distracted",german:"abgelenkt",categories:["show","draw"],source:"List 2"},
+  {text:"hater",german:"Nichtsgönner, Neider",categories:["explain","show"],source:"List 2"},
+  {text:"survey",german:"Umfrage",categories:["explain","draw"],source:"List 2"},
+  {text:"a significant increase",german:"bedeutender Anstieg",categories:["draw","explain"],source:"List 2"},
+  {text:"a dramatic decrease",german:"dramatischer Rückgang",categories:["draw","explain"],source:"List 2"},
+  {text:"benefit",german:"Vorteil",categories:["explain"],source:"List 2"},
+  {text:"suggestion",german:"Vorschlag",categories:["explain"],source:"List 2"},
+  {text:"representative",german:"Vertreter",categories:["explain","show"],source:"List 2"},
+  {text:"to invest",german:"investieren",categories:["explain"],source:"List 2"},
+  {text:"unnecessary",german:"unnötig",categories:["explain","show"],source:"List 2"},
+  {text:"to ragequit",german:"ausrasten und abbrechen",categories:["show"],source:"List 2"},
+  {text:"narrative",german:"Erzählung",categories:["explain"],source:"List 2"},
+  {text:"household",german:"Haushalt",categories:["draw","explain"],source:"List 2"},
+  {text:"to run errands",german:"Besorgungen erledigen",categories:["show","explain"],source:"List 2"},
+  {text:"persuasive",german:"überzeugend",categories:["show","explain"],source:"List 2"},
+  {text:"scammer",german:"Betrüger",categories:["explain","show"],source:"List 2"},
+
+  // ===== VOCABULARY LIST 3 =====
+  {text:"eat out",german:"auswärts essen",categories:["show","explain"],source:"List 3"},
+  {text:"order in",german:"Essen bestellen",categories:["show","explain"],source:"List 3"},
+  {text:"comfort food",german:"Wohlfühlgericht",categories:["explain","draw"],source:"List 3"},
+  {text:"convenient",german:"praktisch, bequem",categories:["explain"],source:"List 3"},
+  {text:"I'm starving!",german:"Ich verhungere!",categories:["show"],source:"List 3"},
+  {text:"to crave something",german:"Verlangen nach etwas haben",categories:["show","explain"],source:"List 3"},
+  {text:"to tip",german:"Trinkgeld geben",categories:["show","draw"],source:"List 3"},
+  {text:"beverage",german:"Getränk",categories:["draw","explain"],source:"List 3"},
+  {text:"nutrition",german:"Ernährung",categories:["explain","draw"],source:"List 3"},
+  {text:"nutrients",german:"Nährstoffe",categories:["explain"],source:"List 3"},
+  {text:"processed food",german:"verarbeitete Lebensmittel",categories:["explain","draw"],source:"List 3"},
+  {text:"fiber",german:"Ballaststoffe",categories:["explain"],source:"List 3"},
+  {text:"to maintain weight",german:"Gewicht halten",categories:["explain","show"],source:"List 3"},
+  {text:"to digest",german:"verdauen",categories:["show","explain"],source:"List 3"},
+  {text:"to avoid",german:"vermeiden",categories:["show","explain"],source:"List 3"},
+  {text:"evidence",german:"Beweis",categories:["explain"],source:"List 3"},
+
+  // ===== VOCABULARY LIST 4 =====
+  {text:"eating disorder",german:"Essstörung",categories:["explain"],source:"List 4"},
+  {text:"to brag",german:"angeben, prahlen",categories:["show","explain"],source:"List 4"},
+  {text:"to share",german:"etwas teilen",categories:["show","draw"],source:"List 4"},
+  {text:"on average",german:"im Durchschnitt",categories:["explain"],source:"List 4"},
+  {text:"sleep-deprived",german:"übermüdet durch Schlafmangel",categories:["show","draw"],source:"List 4"},
+  {text:"purpose",german:"Zweck, Ziel",categories:["explain"],source:"List 4"},
+  {text:"for pleasure",german:"zum Vergnügen",categories:["show","explain"],source:"List 4"},
+  {text:"to enroll",german:"sich anmelden, einschreiben",categories:["explain","show"],source:"List 4"},
+  {text:"tuition fees",german:"Studiengebühren",categories:["explain"],source:"List 4"},
+  {text:"to be deported",german:"abgeschoben werden",categories:["explain"],source:"List 4"},
+  {text:"makeover",german:"Umstyling",categories:["show","explain","draw"],source:"List 4"},
+  {text:"to go out of fashion",german:"aus der Mode kommen",categories:["explain","show"],source:"List 4"},
+  {text:"procrastination",german:"Aufschieben",categories:["show","explain"],source:"List 4"},
+  {text:"to sleep in",german:"ausschlafen",categories:["show"],source:"List 4"},
+  {text:"power nap",german:"Kurzschlaf",categories:["show","draw"],source:"List 4"},
+
+  // ===== VOCABULARY LIST 5 =====
+  {text:"peer pressure",german:"Gruppenzwang",categories:["show","explain"],source:"List 5"},
+  {text:"timeless",german:"zeitlos",categories:["explain"],source:"List 5"},
+  {text:"conscious choice",german:"bewusste Entscheidung",categories:["explain"],source:"List 5"},
+  {text:"authenticity",german:"Authentizität",categories:["explain"],source:"List 5"},
+  {text:"insecurity",german:"Unsicherheit",categories:["show","explain"],source:"List 5"},
+  {text:"to hide flaws",german:"Mängel verstecken",categories:["show","explain"],source:"List 5"},
+  {text:"exaggerated",german:"übertrieben",categories:["show","explain"],source:"List 5"},
+  {text:"desirable",german:"begehrenswert",categories:["explain"],source:"List 5"},
+  {text:"dedication",german:"Hingabe",categories:["explain","show"],source:"List 5"},
+  {text:"rumor",german:"Gerücht",categories:["explain","show"],source:"List 5"},
+  {text:"dispute",german:"anfechten, in Frage stellen",categories:["explain","show"],source:"List 5"},
+  {text:"legacy",german:"Erbe, Vermächtnis",categories:["explain"],source:"List 5"},
+  {text:"deliberately",german:"absichtlich",categories:["explain","show"],source:"List 5"},
+  {text:"destined for",german:"für etwas bestimmt sein",categories:["explain"],source:"List 5"},
+
+  // ===== VOCABULARY LIST 6 =====
+  {text:"obesity",german:"Fettleibigkeit",categories:["explain","draw"],source:"List 6"},
+  {text:"body shaming",german:"Diskriminierung aufgrund des Körpers",categories:["explain","show"],source:"List 6"},
+  {text:"self-conscious",german:"unsicher, gehemmt",categories:["show","explain"],source:"List 6"},
+  {text:"self-confident",german:"selbstbewusst",categories:["show"],source:"List 6"},
+  {text:"competitive",german:"ehrgeizig, wettbewerbsorientiert",categories:["show","explain"],source:"List 6"},
+  {text:"equipment",german:"Ausrüstung",categories:["draw","explain"],source:"List 6"},
+  {text:"get out of one's comfort zone",german:"Komfortzone verlassen",categories:["explain","show"],source:"List 6"},
+  {text:"rite of passage",german:"Übergangsritus",categories:["explain"],source:"List 6"},
+  {text:"opponent",german:"Gegner",categories:["show","draw"],source:"List 6"},
+  {text:"facility",german:"Einrichtung, Anlage",categories:["draw","explain"],source:"List 6"},
+  {text:"spectator",german:"Zuschauer",categories:["show","draw"],source:"List 6"},
+  {text:"littering",german:"Müll wegwerfen",categories:["show","draw"],source:"List 6"},
+  {text:"legal age",german:"gesetzliches Alter",categories:["explain"],source:"List 6"},
+  {text:"to give consent",german:"Zustimmung geben",categories:["explain","show"],source:"List 6"},
+  {text:"obstacles",german:"Hindernisse",categories:["draw","show","explain"],source:"List 6"},
+  {text:"determined",german:"entschlossen",categories:["show","explain"],source:"List 6"},
+  {text:"court",german:"Spielfeld, Platz",categories:["draw","explain"],source:"List 6"},
+
+  // ===== WAY2GO UNIT 1: Old friends and new friends =====
+  {text:"sibling",german:"Geschwisterteil",categories:["explain","draw"],source:"Unit 1"},
+  {text:"nephew",german:"Neffe",categories:["explain"],source:"Unit 1"},
+  {text:"niece",german:"Nichte",categories:["explain"],source:"Unit 1"},
+  {text:"stranger",german:"Fremder",categories:["show","explain"],source:"Unit 1"},
+  {text:"to gossip",german:"tratschen",categories:["show","explain"],source:"Unit 1"},
+  {text:"to keep a secret",german:"ein Geheimnis bewahren",categories:["show","explain"],source:"Unit 1"},
+  {text:"to let someone down",german:"jemanden im Stich lassen",categories:["show","explain"],source:"Unit 1"},
+  {text:"to stand by someone",german:"zu jemandem halten",categories:["show"],source:"Unit 1"},
+  {text:"to catch up with someone",german:"sich auf den neuesten Stand bringen",categories:["show","explain"],source:"Unit 1"},
+  {text:"to hang out",german:"abhängen, Zeit verbringen",categories:["show"],source:"Unit 1"},
+  {text:"to fit in",german:"dazugehören, sich anpassen",categories:["explain","show"],source:"Unit 1"},
+  {text:"to cheer someone up",german:"jemanden aufmuntern",categories:["show"],source:"Unit 1"},
+  {text:"reliable",german:"zuverlässig",categories:["explain"],source:"Unit 1"},
+  {text:"loyal",german:"treu",categories:["explain","show"],source:"Unit 1"},
+  {text:"grateful",german:"dankbar",categories:["show","explain"],source:"Unit 1"},
+  {text:"confident",german:"selbstbewusst",categories:["show","explain"],source:"Unit 1"},
+  {text:"to trust someone",german:"jemandem vertrauen",categories:["show","explain"],source:"Unit 1"},
+  {text:"compliment",german:"Kompliment",categories:["show","explain"],source:"Unit 1"},
+  {text:"to borrow",german:"borgen",categories:["show","explain"],source:"Unit 1"},
+
+  // ===== WAY2GO UNIT 2: Me time =====
+  {text:"leisure activity",german:"Freizeitaktivität",categories:["explain","draw"],source:"Unit 2"},
+  {text:"to relax",german:"sich entspannen",categories:["show"],source:"Unit 2"},
+  {text:"enthusiasm",german:"Begeisterung",categories:["show","explain"],source:"Unit 2"},
+  {text:"to sunbathe",german:"sonnenbaden",categories:["show","draw"],source:"Unit 2"},
+  {text:"birdwatching",german:"Vogelbeobachtung",categories:["show","draw"],source:"Unit 2"},
+  {text:"choir",german:"Chor",categories:["show","draw"],source:"Unit 2"},
+  {text:"embarrassed",german:"peinlich berührt",categories:["show"],source:"Unit 2"},
+  {text:"to rescue",german:"retten",categories:["show","draw"],source:"Unit 2"},
+  {text:"creativity",german:"Kreativität",categories:["explain"],source:"Unit 2"},
+  {text:"fundraising",german:"Spendensammlung",categories:["explain","show"],source:"Unit 2"},
+  {text:"robotics",german:"Robotik",categories:["draw","explain"],source:"Unit 2"},
+  {text:"addicted",german:"süchtig",categories:["show","explain"],source:"Unit 2"},
+  {text:"to restrict",german:"einschränken",categories:["explain","show"],source:"Unit 2"},
+  {text:"to socialise",german:"Kontakte pflegen",categories:["show","explain"],source:"Unit 2"},
+  {text:"anecdote",german:"Anekdote",categories:["explain"],source:"Unit 2"},
+  {text:"multiplayer mode",german:"Mehrspielermodus",categories:["explain","draw"],source:"Unit 2"},
+  {text:"entertainment industry",german:"Unterhaltungsindustrie",categories:["explain"],source:"Unit 2"},
+
+  // ===== WAY2GO UNIT 4: Eat, sleep, repeat =====
+  {text:"takeaway",german:"Essen zum Mitnehmen",categories:["show","draw"],source:"Unit 4"},
+  {text:"delivery",german:"Lieferung",categories:["show","draw"],source:"Unit 4"},
+  {text:"tasteless",german:"geschmacklos",categories:["show"],source:"Unit 4"},
+  {text:"delicious",german:"köstlich",categories:["show"],source:"Unit 4"},
+  {text:"spicy",german:"scharf",categories:["show","explain"],source:"Unit 4"},
+  {text:"homemade",german:"hausgemacht",categories:["explain","draw"],source:"Unit 4"},
+  {text:"protein",german:"Eiweiß",categories:["explain","draw"],source:"Unit 4"},
+  {text:"dairy",german:"Milchprodukte",categories:["draw","explain"],source:"Unit 4"},
+  {text:"whole grains",german:"Vollkornprodukte",categories:["draw","explain"],source:"Unit 4"},
+  {text:"saturated fat",german:"gesättigte Fettsäuren",categories:["explain"],source:"Unit 4"},
+  {text:"obsessed",german:"besessen",categories:["show","explain"],source:"Unit 4"},
+  {text:"lean meat",german:"mageres Fleisch",categories:["draw","explain"],source:"Unit 4"},
+
+  // ===== WAY2GO UNIT 6: All the rage =====
+  {text:"trendy",german:"trendig",categories:["show","explain"],source:"Unit 6"},
+  {text:"all the rage",german:"der letzte Schrei",categories:["explain"],source:"Unit 6"},
+  {text:"wig",german:"Perücke",categories:["draw","show"],source:"Unit 6"},
+  {text:"to retouch",german:"retuschieren",categories:["explain","show"],source:"Unit 6"},
+  {text:"body image",german:"Körperbild",categories:["explain"],source:"Unit 6"},
+  {text:"gorgeous",german:"wunderschön",categories:["show","explain"],source:"Unit 6"},
+  {text:"campaign",german:"Kampagne",categories:["explain"],source:"Unit 6"},
+  {text:"audience",german:"Publikum",categories:["draw","show"],source:"Unit 6"},
+  {text:"to go viral",german:"viral gehen",categories:["explain"],source:"Unit 6"},
+  {text:"to inspire",german:"inspirieren",categories:["explain","show"],source:"Unit 6"},
+  {text:"designer label",german:"Designermarke",categories:["explain","draw"],source:"Unit 6"},
+  {text:"ripped jeans",german:"zerrissene Jeans",categories:["draw","show"],source:"Unit 6"},
+  {text:"workwear",german:"Arbeitskleidung",categories:["draw","explain"],source:"Unit 6"},
+  {text:"appearance",german:"Aussehen, Erscheinung",categories:["explain"],source:"Unit 6"},
+  {text:"cosmetic surgery",german:"Schönheitsoperation",categories:["explain"],source:"Unit 6"},
+
+  // ===== WAY2GO UNIT 7: Move it! =====
+  {text:"athlete",german:"Sportler/in",categories:["show","draw"],source:"Unit 7"},
+  {text:"coach",german:"Trainer/in",categories:["show","draw"],source:"Unit 7"},
+  {text:"tournament",german:"Turnier",categories:["explain","draw"],source:"Unit 7"},
+  {text:"defeat",german:"Niederlage",categories:["show","explain"],source:"Unit 7"},
+  {text:"determination",german:"Entschlossenheit",categories:["show","explain"],source:"Unit 7"},
+  {text:"swagger",german:"selbstbewusstes Auftreten",categories:["show"],source:"Unit 7"},
+  {text:"obstacle course",german:"Hindernisparcours",categories:["draw","show"],source:"Unit 7"},
+  {text:"fundraising event",german:"Benefizveranstaltung",categories:["explain"],source:"Unit 7"},
+  {text:"to crawl",german:"kriechen",categories:["show"],source:"Unit 7"},
+  {text:"barbed wire",german:"Stacheldraht",categories:["draw","explain"],source:"Unit 7"},
+  {text:"mud",german:"Schlamm",categories:["draw","show"],source:"Unit 7"},
+  {text:"rope climbing",german:"Seilklettern",categories:["show","draw"],source:"Unit 7"},
+  {text:"accomplishment",german:"Leistung, Errungenschaft",categories:["explain"],source:"Unit 7"},
+  {text:"to tackle",german:"in Angriff nehmen",categories:["show","explain"],source:"Unit 7"},
+  {text:"rowing",german:"Rudern",categories:["show","draw"],source:"Unit 7"},
+
+  // ===== WAY2GO UNIT 8: Rules – make or break =====
+  {text:"to be obliged to",german:"verpflichtet sein",categories:["explain"],source:"Unit 8"},
+  {text:"forbidden",german:"verboten",categories:["show","draw","explain"],source:"Unit 8"},
+  {text:"to get arrested",german:"verhaftet werden",categories:["show","draw"],source:"Unit 8"},
+  {text:"to pay a fine",german:"eine Geldstrafe zahlen",categories:["show","explain"],source:"Unit 8"},
+  {text:"age limit",german:"Altersgrenze",categories:["explain"],source:"Unit 8"},
+  {text:"detention",german:"Nachsitzen",categories:["show","draw"],source:"Unit 8"},
+  {text:"to break the law",german:"das Gesetz brechen",categories:["explain","show"],source:"Unit 8"},
+  {text:"to obey a rule",german:"eine Regel befolgen",categories:["explain","show"],source:"Unit 8"},
+  {text:"copyright",german:"Urheberrecht",categories:["explain"],source:"Unit 8"},
+  {text:"plagiarism",german:"Plagiat",categories:["explain"],source:"Unit 8"},
+  {text:"to cheat",german:"schummeln, betrügen",categories:["show","explain"],source:"Unit 8"},
+  {text:"fraud",german:"Betrug",categories:["explain"],source:"Unit 8"},
+  {text:"to blame someone",german:"jemanden beschuldigen",categories:["show","explain"],source:"Unit 8"},
+  {text:"to punish",german:"bestrafen",categories:["show","explain"],source:"Unit 8"},
+  {text:"school uniform",german:"Schuluniform",categories:["draw","explain"],source:"Unit 8"},
+  {text:"to tolerate",german:"tolerieren, dulden",categories:["explain","show"],source:"Unit 8"},
+  {text:"public display of affection",german:"öffentliche Zuneigungsbekundung",categories:["show","explain"],source:"Unit 8"},
+];
+
+// ============================================================
+// SOUND EFFECTS (Web Audio API — no external files)
+// ============================================================
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+function getAudio() {
+  if (!audioCtx) audioCtx = new AudioCtx();
+  return audioCtx;
+}
+
+function playTone(freq, duration, type = 'sine', vol = 0.3) {
+  const ctx = getAudio();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = type;
+  osc.frequency.value = freq;
+  gain.gain.setValueAtTime(vol, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(ctx.currentTime);
+  osc.stop(ctx.currentTime + duration);
+}
+
+function sfxCorrect() {
+  // Rising two-tone "ding"
+  playTone(600, 0.12, 'sine', 0.25);
+  setTimeout(() => playTone(900, 0.18, 'sine', 0.25), 80);
+}
+
+function sfxSkip() {
+  // Quick low whoosh
+  playTone(300, 0.15, 'triangle', 0.2);
+  setTimeout(() => playTone(200, 0.1, 'triangle', 0.15), 60);
+}
+
+function sfxCountdownBeep() {
+  // Short high beep
+  playTone(880, 0.1, 'square', 0.15);
+}
+
+function sfxBuzzer() {
+  // Harsh buzzer sound
+  const ctx = getAudio();
+  const osc1 = ctx.createOscillator();
+  const osc2 = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc1.type = 'sawtooth';
+  osc1.frequency.value = 150;
+  osc2.type = 'square';
+  osc2.frequency.value = 155;
+  gain.gain.setValueAtTime(0.3, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
+  osc1.connect(gain);
+  osc2.connect(gain);
+  gain.connect(ctx.destination);
+  osc1.start(ctx.currentTime);
+  osc2.start(ctx.currentTime);
+  osc1.stop(ctx.currentTime + 0.8);
+  osc2.stop(ctx.currentTime + 0.8);
+}
+
+// Track which seconds we've beeped for (avoid double-beeping)
+let beepedSeconds = new Set();
+
+// ============================================================
+// GAME STATE
+// ============================================================
+let state = {
+  groups: [],          // [{name, score}]
+  currentGroupIdx: 0,
+  currentCategory: null,
+  usedWordIds: new Set(),       // indices into ALL_WORDS — persists entire game
+  roundWords: [],               // [{wordIdx, result:'correct'|'skipped'}]
+  roundScore: 0,
+  timer: null,
+  timeLeft: 60,
+  gameStarted: false,
+  roundActive: false,
+  currentWordIdx: null,
+  history: [],                  // for undo within a round
+  roundUndoSnapshot: null,      // snapshot before round started for undo-round
+};
+
+// ============================================================
+// SETUP
+// ============================================================
+function addGroup() {
+  const c = document.getElementById('groups-container');
+  const n = c.querySelectorAll('.group-row').length + 1;
+  const row = document.createElement('div');
+  row.className = 'group-row';
+  row.innerHTML = `<input type="text" placeholder="Group ${n}" class="group-input" maxlength="30">
+    <button onclick="removeGroup(this)" title="Remove">&times;</button>`;
+  c.appendChild(row);
+}
+
+function removeGroup(btn) {
+  const c = document.getElementById('groups-container');
+  if (c.querySelectorAll('.group-row').length <= 2) return;
+  btn.parentElement.remove();
+}
+
+function startGame() {
+  // Initialize audio context on user gesture (required for mobile Safari)
+  getAudio();
+  const inputs = document.querySelectorAll('.group-input');
+  const groups = [];
+  inputs.forEach((inp, i) => {
+    const name = inp.value.trim() || `Group ${i + 1}`;
+    groups.push({ name, score: 0 });
+  });
+  if (groups.length < 2) return;
+  state.groups = groups;
+  state.currentGroupIdx = 0;
+  state.usedWordIds = new Set();
+  state.gameStarted = true;
+  showScreen('pick');
+}
+
+// ============================================================
+// SCREENS
+// ============================================================
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(name + '-screen').classList.add('active');
+  // Hide header on play screen for mobile space
+  document.body.classList.toggle('playing', name === 'play');
+  window.scrollTo(0, 0);
+  if (name === 'pick') updatePickScreen();
+  if (name === 'final') updateFinalScreen();
+}
+
+function updatePickScreen() {
+  const g = state.groups[state.currentGroupIdx];
+  document.getElementById('pick-prompt').textContent = `${g.name}, choose a category:`;
+  document.getElementById('pick-group-label').textContent = `Turn: ${g.name}`;
+  const remaining = ALL_WORDS.length - state.usedWordIds.size;
+  document.getElementById('words-remaining').textContent = `${remaining} words left`;
+  renderScoreboard('pick-scoreboard');
+}
+
+function renderScoreboard(containerId) {
+  const el = document.getElementById(containerId);
+  let html = '<h3>Scoreboard</h3>';
+  state.groups.forEach((g, i) => {
+    const cls = i === state.currentGroupIdx ? ' current' : '';
+    html += `<div class="score-row${cls}"><span class="group-name">${esc(g.name)}</span><span class="score">${g.score}</span></div>`;
+  });
+  el.innerHTML = html;
+}
+
+// ============================================================
+// CATEGORY & ROUND
+// ============================================================
+function getWordsForCategory(cat) {
+  return ALL_WORDS.map((w, i) => ({ ...w, idx: i }))
+    .filter(w => w.categories.includes(cat) && !state.usedWordIds.has(w.idx));
+}
+
+function pickCategory(cat) {
+  const available = getWordsForCategory(cat);
+  if (available.length === 0) {
+    alert('No more words available for this category! Try another.');
+    return;
+  }
+  state.currentCategory = cat;
+  state.roundWords = [];
+  state.roundScore = 0;
+  state.history = [];
+  state.timeLeft = 60;
+  state.roundActive = true;
+  beepedSeconds = new Set();
+
+  // Save snapshot for undo-round
+  state.roundUndoSnapshot = {
+    usedWordIds: new Set(state.usedWordIds),
+    groupScore: state.groups[state.currentGroupIdx].score,
+  };
+
+  showScreen('play');
+  setupPlayScreen();
+  nextWord();
+  startTimer();
+}
+
+function setupPlayScreen() {
+  const cat = state.currentCategory;
+  const label = document.getElementById('cat-label');
+  label.textContent = cat === 'draw' ? '✏️ Draw' : cat === 'explain' ? '💬 Explain' : '🎭 Show';
+  label.className = 'category-label ' + cat;
+  const fill = document.getElementById('timer-fill');
+  fill.style.width = '100%';
+  fill.style.background = cat === 'draw' ? 'var(--draw)' : cat === 'explain' ? 'var(--explain)' : 'var(--show)';
+  document.getElementById('round-score-num').textContent = '0';
+  document.getElementById('undo-btn').disabled = true;
+}
+
+function nextWord() {
+  const available = getWordsForCategory(state.currentCategory);
+  if (available.length === 0) {
+    endRound();
+    return;
+  }
+  const pick = available[Math.floor(Math.random() * available.length)];
+  state.currentWordIdx = pick.idx;
+  document.getElementById('word-text').textContent = pick.text;
+  document.getElementById('word-source').textContent = pick.source;
+}
+
+// ============================================================
+// TIMER
+// ============================================================
+function startTimer() {
+  clearInterval(state.timer);
+  state.timer = setInterval(() => {
+    state.timeLeft -= 0.1;
+    if (state.timeLeft <= 0) {
+      state.timeLeft = 0;
+      clearInterval(state.timer);
+      endRound();
+    }
+    updateTimerDisplay();
+  }, 100);
+}
+
+function updateTimerDisplay() {
+  const secs = Math.ceil(state.timeLeft);
+  const el = document.getElementById('timer-text');
+  el.textContent = secs;
+  el.className = 'timer-text' + (secs <= 5 ? ' danger' : secs <= 15 ? ' warning' : '');
+  const pct = (state.timeLeft / 60) * 100;
+  document.getElementById('timer-fill').style.width = pct + '%';
+  // Countdown beeps for last 5 seconds
+  if (secs <= 5 && secs >= 1 && !beepedSeconds.has(secs) && state.roundActive) {
+    beepedSeconds.add(secs);
+    sfxCountdownBeep();
+  }
+}
+
+// ============================================================
+// GAME ACTIONS
+// ============================================================
+function markCorrect() {
+  if (!state.roundActive) return;
+  sfxCorrect();
+  const idx = state.currentWordIdx;
+  state.usedWordIds.add(idx);
+  state.roundWords.push({ wordIdx: idx, result: 'correct' });
+  state.roundScore++;
+  state.history.push({ action: 'correct', wordIdx: idx });
+  document.getElementById('round-score-num').textContent = state.roundScore;
+  document.getElementById('undo-btn').disabled = false;
+  nextWord();
+}
+
+function skipWord() {
+  if (!state.roundActive) return;
+  sfxSkip();
+  const idx = state.currentWordIdx;
+  state.usedWordIds.add(idx);
+  state.roundWords.push({ wordIdx: idx, result: 'skipped' });
+  state.history.push({ action: 'skip', wordIdx: idx });
+  document.getElementById('undo-btn').disabled = false;
+  nextWord();
+}
+
+function undoLast() {
+  if (state.history.length === 0) return;
+  const last = state.history.pop();
+  state.usedWordIds.delete(last.wordIdx);
+  state.roundWords.pop();
+  if (last.action === 'correct') {
+    state.roundScore--;
+    document.getElementById('round-score-num').textContent = state.roundScore;
+  }
+  // Show the undone word again
+  state.currentWordIdx = last.wordIdx;
+  document.getElementById('word-text').textContent = ALL_WORDS[last.wordIdx].text;
+  document.getElementById('word-source').textContent = ALL_WORDS[last.wordIdx].source;
+  document.getElementById('undo-btn').disabled = state.history.length === 0;
+}
+
+// ============================================================
+// END ROUND
+// ============================================================
+function endRound() {
+  clearInterval(state.timer);
+  state.roundActive = false;
+  sfxBuzzer();
+  state.groups[state.currentGroupIdx].score += state.roundScore;
+  showScreen('summary');
+  updateSummaryScreen();
+}
+
+function updateSummaryScreen() {
+  const g = state.groups[state.currentGroupIdx];
+  document.getElementById('summary-group').textContent = g.name;
+  document.getElementById('summary-points').textContent = state.roundScore;
+  const list = document.getElementById('summary-words');
+  list.innerHTML = '';
+  state.roundWords.forEach(rw => {
+    const w = ALL_WORDS[rw.wordIdx];
+    const cls = rw.result === 'correct' ? 'correct' : 'skipped';
+    const icon = rw.result === 'correct' ? '✓' : '—';
+    list.innerHTML += `<li><span>${esc(w.text)}</span><span class="${cls}">${icon}</span></li>`;
+  });
+  renderScoreboard('summary-scoreboard');
+}
+
+function undoRound() {
+  // Restore state to before the round
+  if (!state.roundUndoSnapshot) return;
+  state.usedWordIds = state.roundUndoSnapshot.usedWordIds;
+  state.groups[state.currentGroupIdx].score = state.roundUndoSnapshot.groupScore;
+  state.roundWords = [];
+  state.roundScore = 0;
+  state.history = [];
+  state.roundUndoSnapshot = null;
+  showScreen('pick');
+}
+
+function nextTurn() {
+  // Check if all words used
+  if (state.usedWordIds.size >= ALL_WORDS.length) {
+    showScreen('final');
+    return;
+  }
+  state.currentGroupIdx = (state.currentGroupIdx + 1) % state.groups.length;
+  showScreen('pick');
+}
+
+// ============================================================
+// RESET
+// ============================================================
+function confirmResetRound() {
+  showOverlay('Reset Round?', 'The timer will restart. Words used this round will stay marked as used.', () => {
+    clearInterval(state.timer);
+    state.roundActive = false;
+    // Words stay used! Only reset round score/state
+    state.roundWords = [];
+    state.roundScore = 0;
+    state.history = [];
+    showScreen('pick');
+    closeOverlay();
+  });
+}
+
+function confirmResetGame() {
+  showOverlay('Reset Game?', 'All scores and progress will be lost. Are you sure?', () => {
+    clearInterval(state.timer);
+    state = {
+      groups: [], currentGroupIdx: 0, currentCategory: null,
+      usedWordIds: new Set(), roundWords: [], roundScore: 0,
+      timer: null, timeLeft: 60, gameStarted: false, roundActive: false,
+      currentWordIdx: null, history: [], roundUndoSnapshot: null,
+    };
+    closeOverlay();
+    showScreen('setup');
+  });
+}
+
+function endGameEarly() {
+  showOverlay('End Game?', 'End the game now and see final scores?', () => {
+    clearInterval(state.timer);
+    closeOverlay();
+    showScreen('final');
+  });
+}
+
+function newGame() {
+  state = {
+    groups: [], currentGroupIdx: 0, currentCategory: null,
+    usedWordIds: new Set(), roundWords: [], roundScore: 0,
+    timer: null, timeLeft: 60, gameStarted: false, roundActive: false,
+    currentWordIdx: null, history: [], roundUndoSnapshot: null,
+  };
+  showScreen('setup');
+}
+
+// ============================================================
+// FINAL SCREEN
+// ============================================================
+function updateFinalScreen() {
+  const sorted = [...state.groups].sort((a, b) => b.score - a.score);
+  const maxScore = sorted[0]?.score || 0;
+  const el = document.getElementById('final-scores');
+  const medals = ['🥇', '🥈', '🥉'];
+  el.innerHTML = '';
+  sorted.forEach((g, i) => {
+    const win = g.score === maxScore && maxScore > 0 ? ' winner' : '';
+    const rank = medals[i] || `#${i + 1}`;
+    el.innerHTML += `<div class="final-row${win}"><span class="rank">${rank}</span><span class="name">${esc(g.name)}</span><span class="pts">${g.score}</span></div>`;
+  });
+}
+
+// ============================================================
+// OVERLAY (confirmation dialogs)
+// ============================================================
+function showOverlay(title, msg, onConfirm) {
+  document.getElementById('confirm-title').textContent = title;
+  document.getElementById('confirm-msg').textContent = msg;
+  const btn = document.getElementById('confirm-action-btn');
+  btn.onclick = onConfirm;
+  document.getElementById('confirm-overlay').classList.add('active');
+}
+
+function closeOverlay() {
+  document.getElementById('confirm-overlay').classList.remove('active');
+}
+
+// ============================================================
+// UTILS
+// ============================================================
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+</script>
+</body>
+</html>
