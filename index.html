@@ -396,6 +396,51 @@
   .overlay-actions { display: flex; gap: 0.5rem; }
   .overlay-actions .btn { flex: 1; }
 
+  /* Game history */
+  .history-section {
+    width: 100%; margin-top: 2rem; padding-top: 1.5rem;
+    border-top: 1px solid rgba(255,255,255,0.06);
+  }
+  .history-section h3 {
+    font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--muted); font-weight: 600; margin-bottom: 0.8rem;
+  }
+  .history-entry {
+    background: var(--card); border: 1.5px solid var(--card-border);
+    border-radius: 14px; padding: 0.9rem 1rem; margin-bottom: 0.6rem;
+    backdrop-filter: blur(10px);
+  }
+  .history-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 0.5rem;
+  }
+  .history-date { font-size: 0.75rem; color: var(--muted); font-weight: 500; }
+  .history-delete {
+    background: none; border: none; color: var(--muted); cursor: pointer;
+    font-size: 0.75rem; padding: 0.2rem 0.4rem; border-radius: 6px;
+    transition: color 0.15s, background 0.15s;
+  }
+  .history-delete:hover { color: #f87171; background: rgba(239,68,68,0.1); }
+  .history-scores {
+    display: flex; flex-wrap: wrap; gap: 0.4rem;
+  }
+  .history-team {
+    display: flex; align-items: center; gap: 0.3rem;
+    background: rgba(255,255,255,0.04); padding: 0.25rem 0.6rem;
+    border-radius: 8px; font-size: 0.8rem;
+  }
+  .history-team .ht-name { font-weight: 500; color: var(--text-secondary); }
+  .history-team .ht-score { font-weight: 800; color: var(--accent); }
+  .history-team.ht-winner .ht-name { color: var(--text); }
+  .history-team.ht-winner { background: rgba(250,204,21,0.08); }
+  .history-clear {
+    margin-top: 0.5rem; background: none; border: none; color: var(--muted);
+    cursor: pointer; font-size: 0.75rem; font-family: inherit; padding: 0.3rem 0;
+    transition: color 0.15s;
+  }
+  .history-clear:hover { color: #f87171; }
+  .history-empty { color: var(--muted); font-size: 0.8rem; font-style: italic; }
+
   /* Times up animation */
   .times-up { animation: shake 0.4s ease-out; }
   @keyframes shake {
@@ -429,6 +474,7 @@
     <button class="add-group-btn" onclick="addGroup()">+ Add Group</button>
   </div>
   <button class="btn btn-primary btn-block" onclick="startGame()" id="start-btn">Start Game</button>
+  <div class="history-section" id="history-section"></div>
 </div>
 
 <!-- SCREEN: Category Pick -->
@@ -891,6 +937,7 @@ function showScreen(name) {
   // Hide header on play screen for mobile space
   document.body.classList.toggle('playing', name === 'play');
   window.scrollTo(0, 0);
+  if (name === 'setup') renderHistory();
   if (name === 'pick') updatePickScreen();
   if (name === 'final') updateFinalScreen();
 }
@@ -1151,6 +1198,7 @@ function newGame() {
 // FINAL SCREEN
 // ============================================================
 function updateFinalScreen() {
+  if (!state.historySaved) { saveGameToHistory(); state.historySaved = true; }
   const sorted = [...state.groups].sort((a, b) => b.score - a.score);
   const maxScore = sorted[0]?.score || 0;
   const el = document.getElementById('final-scores');
@@ -1177,6 +1225,78 @@ function showOverlay(title, msg, onConfirm) {
 function closeOverlay() {
   document.getElementById('confirm-overlay').classList.remove('active');
 }
+
+// ============================================================
+// GAME HISTORY (localStorage)
+// ============================================================
+const HISTORY_KEY = '5b-activity-history';
+
+function getHistory() {
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY)) || []; }
+  catch { return []; }
+}
+
+function saveGameToHistory() {
+  if (!state.groups.length) return;
+  const totalScore = state.groups.reduce((s, g) => s + g.score, 0);
+  if (totalScore === 0) return; // Don't save empty games
+  const history = getHistory();
+  const maxScore = Math.max(...state.groups.map(g => g.score));
+  history.unshift({
+    date: new Date().toISOString(),
+    wordsUsed: state.usedWordIds.size,
+    teams: state.groups.map(g => ({ name: g.name, score: g.score, winner: g.score === maxScore })),
+  });
+  // Keep last 20 games
+  if (history.length > 20) history.length = 20;
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+}
+
+function deleteHistoryEntry(idx) {
+  const history = getHistory();
+  history.splice(idx, 1);
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+  renderHistory();
+}
+
+function clearHistory() {
+  showOverlay('Clear History?', 'Delete all saved game results?', () => {
+    localStorage.removeItem(HISTORY_KEY);
+    renderHistory();
+    closeOverlay();
+  });
+}
+
+function renderHistory() {
+  const section = document.getElementById('history-section');
+  const history = getHistory();
+  if (history.length === 0) {
+    section.innerHTML = '<h3>Past Games</h3><p class="history-empty">No games played yet.</p>';
+    return;
+  }
+  let html = '<h3>Past Games</h3>';
+  history.forEach((game, idx) => {
+    const d = new Date(game.date);
+    const dateStr = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+      + ' ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    html += `<div class="history-entry">
+      <div class="history-header">
+        <span class="history-date">${dateStr}${game.wordsUsed ? ' &middot; ' + game.wordsUsed + ' words' : ''}</span>
+        <button class="history-delete" onclick="deleteHistoryEntry(${idx})" title="Delete">&times;</button>
+      </div>
+      <div class="history-scores">`;
+    game.teams.forEach(t => {
+      const winCls = t.winner ? ' ht-winner' : '';
+      html += `<div class="history-team${winCls}"><span class="ht-name">${esc(t.name)}</span><span class="ht-score">${t.score}</span></div>`;
+    });
+    html += '</div></div>';
+  });
+  html += '<button class="history-clear" onclick="clearHistory()">Clear all history</button>';
+  section.innerHTML = html;
+}
+
+// Render history on page load
+document.addEventListener('DOMContentLoaded', renderHistory);
 
 // ============================================================
 // UTILS
