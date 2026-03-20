@@ -295,6 +295,72 @@ h1 span {
 }
 
 body.playing h1, body.playing .subtitle { display: none; }
+
+/* Progress Screen */
+.progress-nav { display: flex; gap: 0.5rem; width: 100%; margin-bottom: 1rem; }
+.progress-nav .btn { flex: 1; }
+
+.progress-overall {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; width: 100%; margin-bottom: 1rem;
+}
+.progress-overall .stat-card { padding: 0.8rem 0.5rem; }
+.progress-overall .stat-card.wide { grid-column: 1 / -1; }
+.progress-overall .stat-sub { font-size: 0.65rem; color: var(--muted); margin-top: 0.15rem; }
+
+.progress-ring-wrap { text-align: center; margin-bottom: 1.2rem; }
+.progress-ring-wrap svg { transform: rotate(-90deg); }
+.progress-ring-label { font-size: 0.75rem; color: var(--muted); margin-top: 0.4rem; }
+
+.source-progress-list { width: 100%; }
+.source-progress-item {
+  background: var(--card); border: 1.5px solid var(--card-border); border-radius: 14px;
+  padding: 0.9rem 1rem; margin-bottom: 0.5rem; cursor: pointer; transition: all 0.15s;
+}
+.source-progress-item:hover { border-color: rgba(139,92,246,0.3); background: var(--card-hover); }
+.source-progress-item.expanded { border-color: rgba(139,92,246,0.4); }
+.source-progress-header { display: flex; justify-content: space-between; align-items: center; }
+.source-progress-name { font-weight: 700; font-size: 0.9rem; }
+.source-progress-stats { display: flex; gap: 0.6rem; font-size: 0.72rem; color: var(--muted); }
+.source-progress-stats .mastered-count { color: var(--correct); font-weight: 600; }
+.source-progress-stats .weak-count { color: var(--wrong); font-weight: 600; }
+.source-progress-stats .not-seen-count { color: var(--muted); font-weight: 600; }
+.source-progress-bar {
+  width: 100%; height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px;
+  margin-top: 0.6rem; overflow: hidden; display: flex;
+}
+.source-progress-bar .bar-mastered { background: var(--correct); height: 100%; transition: width 0.3s; }
+.source-progress-bar .bar-practiced { background: var(--accent); height: 100%; transition: width 0.3s; }
+.source-progress-bar .bar-weak { background: var(--wrong); height: 100%; transition: width 0.3s; }
+
+.word-detail-list {
+  margin-top: 0.8rem; display: none; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 0.5rem;
+}
+.source-progress-item.expanded .word-detail-list { display: block; }
+.word-detail-row {
+  display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0;
+  border-bottom: 1px solid rgba(255,255,255,0.03); font-size: 0.8rem;
+}
+.word-detail-row:last-child { border-bottom: none; }
+.word-detail-status { width: 20px; text-align: center; flex-shrink: 0; font-size: 0.85rem; }
+.word-detail-name { flex: 1; font-weight: 500; color: var(--text); }
+.word-detail-counts { display: flex; gap: 0.4rem; font-size: 0.72rem; flex-shrink: 0; }
+.word-detail-counts .correct-count { color: var(--correct); font-weight: 600; }
+.word-detail-counts .wrong-count { color: var(--wrong); font-weight: 600; }
+.word-detail-row.mastered .word-detail-name { color: var(--correct); }
+.word-detail-row.weak .word-detail-name { color: var(--wrong); }
+.word-detail-row.unseen .word-detail-name { color: var(--muted); }
+
+.progress-legend {
+  display: flex; gap: 1rem; justify-content: center; margin-bottom: 1rem; font-size: 0.7rem; color: var(--muted);
+}
+.progress-legend span { display: flex; align-items: center; gap: 0.3rem; }
+.legend-dot {
+  width: 8px; height: 8px; border-radius: 50%; display: inline-block;
+}
+.legend-dot.mastered { background: var(--correct); }
+.legend-dot.practiced { background: var(--accent); }
+.legend-dot.weak { background: var(--wrong); }
+.legend-dot.unseen { background: rgba(255,255,255,0.15); }
 </style>
 </head>
 <body>
@@ -377,6 +443,64 @@ body.playing h1, body.playing .subtitle { display: none; }
 
   <button class="btn btn-primary btn-block" id="start-btn" disabled onclick="startPractice()" style="margin-bottom:0.5rem;">Start Practice</button>
   <button class="btn btn-weak btn-block btn-small" id="weak-btn" style="display:none;" onclick="practiceWeakWords()">Practice Weak Words</button>
+  <button class="btn btn-secondary btn-block btn-small" onclick="showProgressScreen()" style="margin-top:0.5rem;">📊 My Progress</button>
+</div>
+
+<!-- PROGRESS SCREEN -->
+<div id="progress-screen" class="screen">
+  <div class="progress-nav">
+    <button class="btn btn-secondary" onclick="goHome()">← Back</button>
+  </div>
+
+  <!-- Overall ring + stats -->
+  <div class="progress-ring-wrap">
+    <svg width="140" height="140" viewBox="0 0 140 140">
+      <circle cx="70" cy="70" r="60" stroke="rgba(255,255,255,0.06)" stroke-width="10" fill="none"/>
+      <circle id="ring-mastered" cx="70" cy="70" r="60" stroke="#22c55e" stroke-width="10" fill="none"
+        stroke-dasharray="377" stroke-dashoffset="377" stroke-linecap="round"/>
+      <circle id="ring-practiced" cx="70" cy="70" r="60" stroke="#8b5cf6" stroke-width="10" fill="none"
+        stroke-dasharray="377" stroke-dashoffset="377" stroke-linecap="round"/>
+      <text x="70" y="62" text-anchor="middle" fill="#f1f1f4" font-size="28" font-weight="800"
+        style="transform:rotate(90deg);transform-origin:70px 70px" id="ring-pct">0%</text>
+      <text x="70" y="82" text-anchor="middle" fill="#a1a1b5" font-size="11" font-weight="500"
+        style="transform:rotate(90deg);transform-origin:70px 70px">mastered</text>
+    </svg>
+  </div>
+
+  <div class="progress-overall">
+    <div class="stat-card">
+      <div class="stat-value" id="prog-total-words">0</div>
+      <div class="stat-label">Total Words</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="prog-mastered" style="color:var(--correct)">0</div>
+      <div class="stat-label">Mastered</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="prog-practiced" style="color:var(--accent)">0</div>
+      <div class="stat-label">Practiced</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="prog-weak" style="color:var(--wrong)">0</div>
+      <div class="stat-label">Weak</div>
+    </div>
+    <div class="stat-card wide">
+      <div class="stat-value" id="prog-unseen">0</div>
+      <div class="stat-label">Not Yet Practiced</div>
+    </div>
+  </div>
+
+  <div class="progress-legend">
+    <span><span class="legend-dot mastered"></span> Mastered</span>
+    <span><span class="legend-dot practiced"></span> Practiced</span>
+    <span><span class="legend-dot weak"></span> Weak</span>
+    <span><span class="legend-dot unseen"></span> Unseen</span>
+  </div>
+
+  <div class="card">
+    <h3>By Source</h3>
+    <div class="source-progress-list" id="source-progress-list"></div>
+  </div>
 </div>
 
 <!-- PRACTICE SCREEN -->
@@ -1048,6 +1172,118 @@ function getWeakWords() {
     }
   }
   return weak;
+}
+
+// ===== PROGRESS SCREEN =====
+function showProgressScreen() {
+  const allSources = Object.keys(vocabData);
+  let totalWords = 0, totalMastered = 0, totalPracticed = 0, totalWeak = 0;
+
+  const sourceDetails = [];
+  for (const key of allSources) {
+    const entries = vocabData[key];
+    const slug = slugify(key);
+    const prog = state.progressData[slug];
+    const words = prog && prog.words ? prog.words : {};
+
+    let mastered = 0, practiced = 0, weak = 0;
+    const wordDetails = [];
+
+    for (const entry of entries) {
+      const w = words[entry.w];
+      let status = 'unseen';
+      let c = 0, wr = 0;
+      if (w) {
+        c = w.c || 0; wr = w.w || 0;
+        practiced++;
+        if (c >= 3 && c > wr) { mastered++; status = 'mastered'; }
+        else if (wr > 0 && wr >= c) { weak++; status = 'weak'; }
+        else { status = 'practiced'; }
+      }
+      wordDetails.push({ word: entry.w, status, c, w: wr });
+    }
+
+    // Sort: weak first, then practiced, then mastered, then unseen
+    const order = { weak: 0, practiced: 1, unseen: 2, mastered: 3 };
+    wordDetails.sort((a, b) => order[a.status] - order[b.status]);
+
+    totalWords += entries.length;
+    totalMastered += mastered;
+    totalPracticed += practiced;
+    totalWeak += weak;
+
+    sourceDetails.push({ key, total: entries.length, mastered, practiced, weak, wordDetails });
+  }
+
+  const unseen = totalWords - totalPracticed;
+
+  // Update ring
+  const circumference = 2 * Math.PI * 60; // ~377
+  const masteredPct = totalWords > 0 ? totalMastered / totalWords : 0;
+  const practicedPct = totalWords > 0 ? (totalPracticed - totalMastered) / totalWords : 0;
+  document.getElementById('ring-mastered').style.strokeDashoffset = circumference - (masteredPct * circumference);
+  document.getElementById('ring-practiced').style.strokeDashoffset = circumference - ((masteredPct + practicedPct) * circumference);
+  document.getElementById('ring-pct').textContent = Math.round(masteredPct * 100) + '%';
+
+  // Update stat cards
+  document.getElementById('prog-total-words').textContent = totalWords;
+  document.getElementById('prog-mastered').textContent = totalMastered;
+  document.getElementById('prog-practiced').textContent = totalPracticed;
+  document.getElementById('prog-weak').textContent = totalWeak;
+  document.getElementById('prog-unseen').textContent = unseen;
+
+  // Build source list
+  const list = document.getElementById('source-progress-list');
+  list.innerHTML = '';
+
+  for (const src of sourceDetails) {
+    const item = document.createElement('div');
+    item.className = 'source-progress-item';
+    const unseenSrc = src.total - src.practiced;
+    const masteredPctSrc = src.total > 0 ? Math.round((src.mastered / src.total) * 100) : 0;
+    const practicedPctSrc = src.total > 0 ? Math.round(((src.practiced - src.mastered - src.weak) / src.total) * 100) : 0;
+    const weakPctSrc = src.total > 0 ? Math.round((src.weak / src.total) * 100) : 0;
+
+    const statusIcons = {
+      mastered: '✅',
+      practiced: '🔵',
+      weak: '⚠️',
+      unseen: '◯',
+    };
+
+    let wordRows = '';
+    for (const wd of src.wordDetails) {
+      wordRows += `<div class="word-detail-row ${wd.status}">
+        <div class="word-detail-status">${statusIcons[wd.status]}</div>
+        <div class="word-detail-name">${wd.word}</div>
+        <div class="word-detail-counts">
+          ${wd.status !== 'unseen' ? `<span class="correct-count">✓${wd.c}</span><span class="wrong-count">✗${wd.w}</span>` : '<span style="color:var(--muted)">—</span>'}
+        </div>
+      </div>`;
+    }
+
+    item.innerHTML = `
+      <div class="source-progress-header">
+        <div class="source-progress-name">${src.key}</div>
+        <div class="source-progress-stats">
+          <span class="mastered-count">✅ ${src.mastered}</span>
+          <span class="weak-count">⚠️ ${src.weak}</span>
+          <span class="not-seen-count">◯ ${unseenSrc}</span>
+        </div>
+      </div>
+      <div class="source-progress-bar">
+        <div class="bar-mastered" style="width:${masteredPctSrc}%"></div>
+        <div class="bar-practiced" style="width:${practicedPctSrc}%"></div>
+        <div class="bar-weak" style="width:${weakPctSrc}%"></div>
+      </div>
+      <div class="word-detail-list">${wordRows}</div>
+    `;
+
+    item.addEventListener('click', () => item.classList.toggle('expanded'));
+    list.appendChild(item);
+  }
+
+  showScreen('progress-screen');
 }
 
 // ===== UI INIT =====
