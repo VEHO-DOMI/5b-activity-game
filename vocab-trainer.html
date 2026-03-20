@@ -1786,12 +1786,10 @@ function getFirstLetterHint(word, showLetterCount) {
       return p[0].toLowerCase() + '_'.repeat(Math.max(p.length - 1, 1));
     }).join('');
   } else {
-    // Hard: show small words fully, content words get just first letter + short gap
-    return parts.map(p => {
-      if (/^[\s-]+$/.test(p)) return p;
-      if (small.has(p.toLowerCase()) && parts.filter(x => !/^[\s-]+$/.test(x)).length > 1) return p;
-      return p[0].toLowerCase() + '____';
-    }).join('');
+    // Hard: just first letter of the whole phrase + one continuous line
+    const allWords = parts.filter(x => !/^[\s-]+$/.test(x));
+    const firstContent = allWords.find(p => !small.has(p.toLowerCase())) || allWords[0];
+    return firstContent[0].toLowerCase() + '_'.repeat(14);
   }
 }
 
