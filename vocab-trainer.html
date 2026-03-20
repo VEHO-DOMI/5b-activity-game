@@ -361,6 +361,37 @@ body.playing h1, body.playing .subtitle { display: none; }
 .legend-dot.practiced { background: var(--accent); }
 .legend-dot.weak { background: var(--wrong); }
 .legend-dot.unseen { background: rgba(255,255,255,0.15); }
+
+/* Word Reference */
+.ref-select {
+  padding: 0.5rem 0.8rem; border-radius: 10px; border: 1.5px solid var(--card-border);
+  background: var(--card); color: var(--text); font-size: 0.82rem; font-family: inherit;
+  cursor: pointer; appearance: auto;
+}
+.ref-list { width: 100%; }
+.ref-source-group { margin-bottom: 1rem; }
+.ref-source-title {
+  font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--accent); margin-bottom: 0.4rem; padding: 0.3rem 0;
+  border-bottom: 1px solid rgba(139,92,246,0.2);
+}
+.ref-word-item {
+  background: var(--card); border: 1.5px solid var(--card-border); border-radius: 12px;
+  padding: 0.8rem 1rem; margin-bottom: 0.4rem; cursor: pointer; transition: all 0.15s;
+}
+.ref-word-item:hover { border-color: rgba(139,92,246,0.3); background: var(--card-hover); }
+.ref-word-item.expanded { border-color: rgba(139,92,246,0.4); }
+.ref-word-header { display: flex; justify-content: space-between; align-items: baseline; }
+.ref-word-en { font-weight: 700; font-size: 0.9rem; color: var(--text); }
+.ref-word-de { font-size: 0.8rem; color: var(--trans-color); font-style: italic; }
+.ref-word-details {
+  display: none; margin-top: 0.6rem; padding-top: 0.6rem;
+  border-top: 1px solid rgba(255,255,255,0.06); font-size: 0.82rem; line-height: 1.5;
+}
+.ref-word-item.expanded .ref-word-details { display: block; }
+.ref-detail-label { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-top: 0.4rem; }
+.ref-detail-label:first-child { margin-top: 0; }
+.ref-detail-text { color: var(--text-secondary); }
 </style>
 </head>
 <body>
@@ -432,10 +463,10 @@ body.playing h1, body.playing .subtitle { display: none; }
   <div class="card">
     <h3>Exercise Type</h3>
     <div class="type-grid" id="type-grid">
-      <button class="type-btn selected" data-type="mix" onclick="selectType(this)">Mix</button>
-      <button class="type-btn" data-type="context" onclick="selectType(this)">Context</button>
-      <button class="type-btn" data-type="definition" onclick="selectType(this)">Definition</button>
-      <button class="type-btn" data-type="translation" onclick="selectType(this)">Translation</button>
+      <button class="type-btn selected" data-type="mix" onclick="selectType(this)" title="Random mix of all three exercise types">Mix</button>
+      <button class="type-btn" data-type="context" onclick="selectType(this)" title="Complete the sentence — fill in the missing word using context clues and the first letter hint">Context</button>
+      <button class="type-btn" data-type="definition" onclick="selectType(this)" title="Read an English definition and guess which word it describes">Definition</button>
+      <button class="type-btn" data-type="translation" onclick="selectType(this)" title="See the German word and type the English translation">Translation</button>
     </div>
   </div>
 
@@ -443,7 +474,10 @@ body.playing h1, body.playing .subtitle { display: none; }
 
   <button class="btn btn-primary btn-block" id="start-btn" disabled onclick="startPractice()" style="margin-bottom:0.5rem;">Start Practice</button>
   <button class="btn btn-weak btn-block btn-small" id="weak-btn" style="display:none;" onclick="practiceWeakWords()">Practice Weak Words</button>
-  <button class="btn btn-secondary btn-block btn-small" onclick="showProgressScreen()" style="margin-top:0.5rem;">📊 My Progress</button>
+  <div style="display:flex; gap:0.5rem; margin-top:0.5rem;">
+    <button class="btn btn-secondary btn-small" style="flex:1;" onclick="showProgressScreen()">📊 My Progress</button>
+    <button class="btn btn-secondary btn-small" style="flex:1;" onclick="showWordReference()">📖 Word Reference</button>
+  </div>
 </div>
 
 <!-- PROGRESS SCREEN -->
@@ -501,6 +535,25 @@ body.playing h1, body.playing .subtitle { display: none; }
     <h3>By Source</h3>
     <div class="source-progress-list" id="source-progress-list"></div>
   </div>
+</div>
+
+<!-- WORD REFERENCE SCREEN -->
+<div id="reference-screen" class="screen">
+  <div class="progress-nav">
+    <button class="btn btn-secondary" onclick="goHome()">← Back</button>
+  </div>
+
+  <div class="card" style="margin-bottom:0.8rem;">
+    <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+      <input type="text" class="answer-input" id="ref-search" placeholder="Search words..." oninput="filterReference()" style="flex:1; min-width:150px; margin:0;">
+      <select id="ref-source-filter" class="ref-select" onchange="filterReference()">
+        <option value="all">All Sources</option>
+      </select>
+    </div>
+    <div id="ref-count" style="font-size:0.72rem; color:var(--muted); margin-top:0.5rem;"></div>
+  </div>
+
+  <div class="ref-list" id="ref-list"></div>
 </div>
 
 <!-- PRACTICE SCREEN -->
@@ -1306,6 +1359,79 @@ function showProgressScreen() {
   }
 
   showScreen('progress-screen');
+}
+
+// ===== WORD REFERENCE =====
+function showWordReference() {
+  // Populate source filter dropdown
+  const select = document.getElementById('ref-source-filter');
+  select.innerHTML = '<option value="all">All Sources</option>';
+  for (const key of Object.keys(vocabData)) {
+    const opt = document.createElement('option');
+    opt.value = key; opt.textContent = key;
+    select.appendChild(opt);
+  }
+  document.getElementById('ref-search').value = '';
+  buildReferenceList('all', '');
+  showScreen('reference-screen');
+}
+
+function filterReference() {
+  const source = document.getElementById('ref-source-filter').value;
+  const search = document.getElementById('ref-search').value.trim().toLowerCase();
+  buildReferenceList(source, search);
+}
+
+function buildReferenceList(sourceFilter, searchTerm) {
+  const list = document.getElementById('ref-list');
+  list.innerHTML = '';
+  let totalShown = 0;
+
+  const sources = sourceFilter === 'all' ? Object.keys(vocabData) : [sourceFilter];
+
+  for (const src of sources) {
+    const entries = vocabData[src];
+    if (!entries) continue;
+
+    const filtered = entries.filter(e => {
+      if (!searchTerm) return true;
+      return e.w.toLowerCase().includes(searchTerm) ||
+             e.g.toLowerCase().includes(searchTerm) ||
+             e.d.toLowerCase().includes(searchTerm);
+    });
+
+    if (filtered.length === 0) continue;
+
+    const group = document.createElement('div');
+    group.className = 'ref-source-group';
+    group.innerHTML = `<div class="ref-source-title">${src} · ${filtered.length} words</div>`;
+
+    for (const entry of filtered) {
+      const item = document.createElement('div');
+      item.className = 'ref-word-item';
+      // Clean sentence: replace _____ with the actual word in bold
+      const sentenceDisplay = entry.s.replace('_____', `<strong style="color:var(--accent)">${entry.w}</strong>`);
+      item.innerHTML = `
+        <div class="ref-word-header">
+          <span class="ref-word-en">${entry.w}</span>
+          <span class="ref-word-de">${entry.g}</span>
+        </div>
+        <div class="ref-word-details">
+          <div class="ref-detail-label">Definition</div>
+          <div class="ref-detail-text">${entry.d}</div>
+          <div class="ref-detail-label">Example</div>
+          <div class="ref-detail-text">${sentenceDisplay}</div>
+        </div>
+      `;
+      item.addEventListener('click', () => item.classList.toggle('expanded'));
+      group.appendChild(item);
+    }
+
+    list.appendChild(group);
+    totalShown += filtered.length;
+  }
+
+  document.getElementById('ref-count').textContent = `Showing ${totalShown} word${totalShown !== 1 ? 's' : ''}`;
 }
 
 // ===== UI INIT =====
